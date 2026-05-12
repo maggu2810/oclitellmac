@@ -47,7 +47,7 @@ This separation ensures the TUI has zero network overhead and can display budget
 
 ## Installation
 
-### Method 1: GitHub URL (Recommended)
+### Method 1: GitHub URL (NOT Recommended)
 
 Install directly from GitHub repository:
 
@@ -76,19 +76,28 @@ cd oclitellmac
 # Install dependencies
 npm install
 
-# Register with OpenCode (use absolute or relative path)
-opencode plugin add .
+# Register with OpenCode (use absolute path)
+opencode plugin $PWD --global
 ```
 
 ### Configure OpenCode
 
-Add both entry points to your `opencode.json`:
+Add server entry points to your `opencode.json`:
 
 ```json
 {
   "plugin": [
-    "oclitellmac/server",
-    "oclitellmac/tui"
+     "/path/to/oclitellmac"
+  ]
+}
+```
+
+Add TUI entry points to your `tui.json`:
+
+```json
+{
+  "plugin": [
+    "/path/to/oclitellmac"
   ]
 }
 ```
