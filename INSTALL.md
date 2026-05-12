@@ -1,8 +1,13 @@
 # Installation and Testing Guide
 
+This guide walks you through installing and verifying the oclitellmac plugin.
+
+**For features and detailed reference**, see [README.md](README.md).  
+**For configuration details**, see [CONFIGURATION.md](CONFIGURATION.md).
+
 ## Quick Start
 
-### Method 1: GitHub URL (Recommended)
+### Method 1: GitHub URL (NOT Recommended)
 
 Install directly from GitHub:
 
@@ -54,20 +59,7 @@ Edit your `~/.config/opencode/opencode.json` (or project-local `opencode.json`):
 
 ### 2. Configure Server Plugin
 
-Create `~/.config/oclitellmac/server.json`:
-
-**Note**: The plugin uses XDG Base Directory paths. On Linux, you can override the config location with `XDG_CONFIG_HOME`:
-
-```bash
-# Default location
-~/.config/oclitellmac/server.json
-
-# Custom location (Linux only)
-export XDG_CONFIG_HOME="$HOME/my-config"
-# Config will be at: ~/my-config/oclitellmac/server.json
-```
-
-**Configuration content**:
+Create `~/.config/oclitellmac/server.json` with your LiteLLM endpoint(s):
 
 ```json
 {
@@ -76,19 +68,15 @@ export XDG_CONFIG_HOME="$HOME/my-config"
       "baseUrl": "https://your-litellm-proxy.example.com",
       "apiKey": "sk-your-api-key",
       "providerKey": "my-litellm",
-      "providerName": "My LiteLLM Proxy",
       "enabled": true
     }
-  ],
-  "options": {
-    "timeout": 30,
-    "budgetPollInterval": 60,
-    "fallbackToCache": true
-  }
+  ]
 }
 ```
 
-See `server/config-example.json` for full configuration options.
+**For detailed configuration options**, see [CONFIGURATION.md](CONFIGURATION.md).
+
+**For complete examples**, see [`server/config-example.json`](server/config-example.json).
 
 ### 3. Restart OpenCode
 
@@ -141,7 +129,7 @@ export XDG_STATE_HOME="$HOME/my-state"
 # - State: ~/my-state/oclitellmac/
 ```
 
-**Note**: The plugin uses Unix-style paths (`.config`, `.local/state`) on all platforms for consistency with OpenCode core. See `PATH-STRATEGY.md` for detailed rationale.
+**Note**: The plugin uses Unix-style paths (`.config`, `.local/state`) on all platforms for consistency with OpenCode core. See [`PATH-STRATEGY.md`](PATH-STRATEGY.md) for detailed rationale.
 
 ## Verification Steps
 

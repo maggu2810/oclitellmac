@@ -32,6 +32,9 @@ Read @docs/agents-file-conventions.md
 When understanding path management (XDG compliance, cross-platform):
 Read @PATH-STRATEGY.md
 
+When configuring server plugin endpoints or understanding configuration options:
+Read @CONFIGURATION.md
+
 When working on server plugin field mapping or LiteLLM API integration:
 Read @server/README.md (includes field mapping priority and LiteLLM compatibility)
 

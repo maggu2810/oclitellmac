@@ -47,187 +47,11 @@ This separation ensures the TUI has zero network overhead and can display budget
 
 ## Installation
 
-### Method 1: GitHub URL (NOT Recommended)
-
-Install directly from GitHub repository:
-
-```bash
-# Global installation (available in all projects)
-opencode plugin github:maggu2810/oclitellmac --global
-
-# Project-local installation
-opencode plugin github:maggu2810/oclitellmac
-```
-
-OpenCode will automatically:
-- Clone the repository
-- Install dependencies
-- Register both entry points (`oclitellmac/server`, `oclitellmac/tui`)
-
-### Method 2: Local Development
-
-For plugin development or testing local changes:
-
-```bash
-# Clone repository
-git clone https://github.com/maggu2810/oclitellmac.git
-cd oclitellmac
-
-# Install dependencies
-npm install
-
-# Register with OpenCode (use absolute path)
-opencode plugin $PWD --global
-```
-
-### Configure OpenCode
-
-Add server entry points to your `opencode.json`:
-
-```json
-{
-  "plugin": [
-     "/path/to/oclitellmac"
-  ]
-}
-```
-
-Add TUI entry points to your `tui.json`:
-
-```json
-{
-  "plugin": [
-    "/path/to/oclitellmac"
-  ]
-}
-```
-
-**Note**: When using Method 1 (GitHub URL), OpenCode adds these automatically.
-
-### Configure Server Plugin
-
-Create `~/.config/oclitellmac/server.json`:
-
-```json
-{
-  "endpoints": [
-    {
-      "baseUrl": "https://your-litellm-proxy.example.com",
-      "apiKey": "sk-your-api-key",
-      "providerKey": "my-litellm",
-      "providerName": "My LiteLLM Proxy",
-      "enabled": true
-    }
-  ],
-  "options": {
-    "timeout": 30,
-    "budgetPollInterval": 60,
-    "fallbackToCache": true
-  }
-}
-```
-
-See [`server/config-example.json`](server/config-example.json) for detailed configuration examples.
-
-### Restart OpenCode
-
-The plugins will automatically:
-- Load enabled endpoints from config
-- Fetch models from LiteLLM endpoints
-- Inject providers into OpenCode
-- Start budget tracking
-- Display budget panels in TUI sidebar
+See [**INSTALL.md**](INSTALL.md) for installation instructions.
 
 ## Configuration
 
-### Endpoint Configuration
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `baseUrl` | string | ✅ | LiteLLM proxy base URL (without `/v1`) |
-| `apiKey` | string | ✅ | Bearer token for API authentication |
-| `providerKey` | string | ✅ | Unique provider identifier |
-| `providerName` | string | ❌ | Display name in OpenCode UI (auto-formatted from `providerKey` if omitted) |
-| `enabled` | boolean | ❌ | Default: `true`. Whether to load this endpoint |
-| `enabledCategories` | string[] | ❌ | Non-chat model categories to enable (see below) |
-| `enableAllCategories` | boolean | ❌ | Default: `false`. Enable all non-chat models |
-
-### Global Options
-
-| Field | Type | Default | Description |
-|-------|------|---------|-------------|
-| `timeout` | number | `30` | HTTP request timeout in seconds |
-| `budgetPollInterval` | number | `60` | How often to poll `/key/info` in seconds |
-| `fallbackToCache` | boolean | `true` | Use cached data if endpoint unreachable |
-
-## Model Category Filtering
-
-By default, the plugin **blacklists non-chat models** to keep the model picker clean. Non-chat models (embeddings, TTS, image generation, etc.) are still fetched, but hidden from the UI.
-
-### Default Behavior (Chat Models Only)
-
-```json
-{
-  "endpoints": [
-    {
-      "providerKey": "litellm-prod",
-      "baseUrl": "https://litellm.example.com",
-      "apiKey": "sk-..."
-    }
-  ]
-}
-```
-
-Only chat models appear in the model picker.
-
-### Enable Specific Categories
-
-```json
-{
-  "endpoints": [
-    {
-      "providerKey": "litellm-with-embeddings",
-      "baseUrl": "https://litellm.example.com",
-      "apiKey": "sk-...",
-      "enabledCategories": ["embedding", "audio_speech"]
-    }
-  ]
-}
-```
-
-Enables embedding and TTS models while keeping others blacklisted.
-
-### Enable All Non-Chat Models
-
-```json
-{
-  "endpoints": [
-    {
-      "providerKey": "litellm-all-models",
-      "baseUrl": "https://litellm.example.com",
-      "apiKey": "sk-...",
-      "enableAllCategories": true
-    }
-  ]
-}
-```
-
-Shows **all** models in the picker.
-
-### Available Categories
-
-| Category | Description | Examples |
-|----------|-------------|----------|
-| `embedding` | Text embedding models | `text-embedding-ada-002`, `text-embedding-3-large` |
-| `audio_speech` | Text-to-speech (TTS) | `tts-1`, `tts-1-hd` |
-| `transcription` | Speech-to-text (STT) | `whisper-1` |
-| `image_generation` | Image generation | `dall-e-3`, `stable-diffusion-xl` |
-| `video_generation` | Video generation | Model-specific |
-| `ocr` | Document analysis / OCR | Model-specific |
-| `ranking` | Reranking models | Model-specific |
-| `router` | Model routing / moderation | Model-specific |
-
-**Note**: Chat models are **always enabled** regardless of category settings.
+See [**CONFIGURATION.md**](CONFIGURATION.md) for server configuration reference.
 
 ## Path Management
 
@@ -251,37 +75,6 @@ The plugin uses the [XDG Base Directory Specification](https://specifications.fr
     └── litellm-dev.json
 ```
 
-### Platform-Specific Paths
-
-**Linux (Default)**:
-- Config: `~/.config/oclitellmac/server.json`
-- State: `~/.local/state/oclitellmac/`
-
-**Linux (Custom XDG Variables)**:
-```bash
-export XDG_CONFIG_HOME="$HOME/my-config"
-export XDG_STATE_HOME="$HOME/my-state"
-```
-- Config: `~/my-config/oclitellmac/server.json`
-- State: `~/my-state/oclitellmac/`
-
-**macOS** (Unix-style paths):
-- Config: `~/.config/oclitellmac/server.json`
-- State: `~/.local/state/oclitellmac/`
-
-**Windows** (Unix-style paths):
-- Config: `C:\Users\username\.config\oclitellmac\server.json`
-- State: `C:\Users\username\.local\state\oclitellmac\`
-
-### XDG Environment Variables
-
-The plugin respects these environment variables on Linux:
-
-- **`XDG_CONFIG_HOME`**: Override config directory (default: `~/.config`)
-- **`XDG_STATE_HOME`**: Override state directory (default: `~/.local/state`)
-
-**Note**: These environment variables are only meaningful on Linux. On macOS and Windows, the plugin uses the default Unix-style paths (matching OpenCode core behavior).
-
 ### Why Unix-Style Paths Everywhere?
 
 The plugin uses Unix-style paths (`.config`, `.local/state`) on all platforms to:
@@ -290,7 +83,9 @@ The plugin uses Unix-style paths (`.config`, `.local/state`) on all platforms to
 - ✅ Simplify documentation (same paths everywhere)
 - ✅ Allow easy path overrides via environment variables (Linux)
 
-See [`PATH-STRATEGY.md`](PATH-STRATEGY.md) for detailed rationale and alternative approaches considered.
+On Linux, you can override the default paths using `XDG_CONFIG_HOME` and `XDG_STATE_HOME` environment variables. On macOS and Windows, the plugin uses the default Unix-style paths shown above.
+
+See [**CONFIGURATION.md**](CONFIGURATION.md) for platform-specific path details and [`PATH-STRATEGY.md`](PATH-STRATEGY.md) for detailed rationale.
 
 ### Budget Data Format
 
@@ -438,43 +233,13 @@ If an endpoint is unreachable:
 4. Verify file watcher is working: Send a chat message and check if TUI updates
 5. Restart OpenCode to reset file watcher
 
-## Development
-
-### Type Check
-
-```bash
-cd plugins/oclitellmac
-npx tsc --noEmit
-```
-
-**Note**: Errors about missing Node.js types and peer dependencies are expected (runtime dependencies provided by OpenCode).
-
-### File Structure
-
-```
-plugins/oclitellmac/
-├── package.json              # Merged package with dual exports
-├── tsconfig.json             # TypeScript config for both plugins
-├── README.md                 # This file (user guide)
-├── INSTALL.md                # Installation and testing guide
-├── server/                   # Server plugin
-│   ├── src/                  # Server source code
-│   ├── README.md            # Server technical reference
-│   ├── ARCHITECTURE.md      # Server architecture details
-│   ├── IMPLEMENTATION.md    # Server implementation details
-│   ├── VERIFICATION.md      # Server testing checklist
-│   └── config-example.json  # Server config example
-└── tui/                      # TUI plugin
-    ├── src/                  # TUI source code
-    └── README.md            # TUI technical reference
-```
-
 ## Technical References
 
+- **Installation Guide**: See [`INSTALL.md`](INSTALL.md) for step-by-step setup and verification
+- **Configuration Reference**: See [`CONFIGURATION.md`](CONFIGURATION.md) for detailed server.json options
 - **Server Plugin**: See [`server/README.md`](server/README.md) for implementation details
 - **Server Architecture**: See [`server/ARCHITECTURE.md`](server/ARCHITECTURE.md) for modular pipeline design
 - **TUI Plugin**: See [`tui/README.md`](tui/README.md) for component structure and file watching
-- **Installation Guide**: See [`INSTALL.md`](INSTALL.md) for step-by-step setup and verification
 
 ## Requirements
 
