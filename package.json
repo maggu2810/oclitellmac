@@ -1,0 +1,47 @@
+{
+  "name": "oclitellmac",
+  "version": "0.1.0",
+  "description": "OpenCode LiteLLM Auto-Config - Automatic multi-proxy configuration with budget tracking",
+  "type": "module",
+  "exports": {
+    "./server": {
+      "import": "./server/src/index.ts"
+    },
+    "./tui": {
+      "import": "./tui/src/index.tsx"
+    }
+  },
+  "keywords": [
+    "opencode",
+    "plugin",
+    "litellm",
+    "auto-config",
+    "budget",
+    "tui"
+  ],
+  "author": "Markus Rathgeb <maggu2810@mailbox.org>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/maggu2810/oclitellmac.git"
+  },
+  "bugs": {
+    "url": "https://github.com/maggu2810/oclitellmac/issues"
+  },
+  "homepage": "https://github.com/maggu2810/oclitellmac#readme",
+  "dependencies": {
+    "@opencode-ai/plugin": "latest",
+    "@opencode-ai/sdk": "latest",
+    "xdg-basedir": "^5.1.0",
+    "zod": "^3.23.0"
+  },
+  "peerDependencies": {
+    "@opentui/core": "*",
+    "@opentui/keymap": "*",
+    "@opentui/solid": "*",
+    "solid-js": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

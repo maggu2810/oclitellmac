@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Example configuration for oclitellmac/server plugin",
+  "endpoints": [
+    {
+      "providerKey": "litellm-prod",
+      "baseUrl": "https://your-litellm-proxy.example.com",
+      "apiKey": "sk-your-api-key-here",
+      "comment": "Production LiteLLM proxy endpoint"
+    },
+    {
+      "providerKey": "litellm-staging",
+      "baseUrl": "https://staging-litellm.example.com",
+      "apiKey": "sk-staging-key-here",
+      "comment": "Staging environment for testing"
+    }
+  ],
+  "options": {
+    "fallbackToCache": true,
+    "timeout": 10000,
+    "budgetPollInterval": 60000
+  },
+  "_comments": {
+    "providerKey": "Unique identifier for this provider (used as ID, auto-formatted to display name)",
+    "baseUrl": "LiteLLM proxy base URL (without /v1 path)",
+    "apiKey": "Your LiteLLM API key (stored in plain text - ensure file permissions are restrictive)",
+    "providerName": "OPTIONAL: Custom display name (if omitted, auto-formats providerKey: 'litellm-prod' → 'Litellm Prod')",
+    "enabled": "OPTIONAL: Set to false to temporarily disable this endpoint (default: true)",
+    "enabledCategories": "OPTIONAL: Array of non-chat model categories to enable (default: [] = chat only). Valid: ['embedding', 'audio_speech', 'transcription', 'image_generation', 'video_generation', 'ocr', 'ranking', 'router']",
+    "enableAllCategories": "OPTIONAL: Set to true to enable all non-chat models (default: false). Overrides enabledCategories.",
+    "fallbackToCache": "If true, use cached model/budget data when endpoint is unreachable (default: true)",
+    "timeout": "Request timeout in milliseconds (default: 30ms, example shows 10000ms)",
+    "budgetPollInterval": "How often to poll budget data in milliseconds (default: 60ms, example shows 60000ms = 1 minute)"
+  },
+  "_installation": {
+    "1": "Copy this file to: ~/.config/oclitellmac/server.json (Linux/macOS) or %USERPROFILE%\\.config\\oclitellmac\\server.json (Windows)",
+    "2": "NOTE: Plugin uses XDG Base Directory paths. On Linux, you can override with: export XDG_CONFIG_HOME=\"$HOME/my-config\"",
+    "3": "Replace placeholder values with your actual LiteLLM endpoint details",
+    "4": "Ensure file permissions: chmod 600 ~/.config/oclitellmac/server.json (Linux/macOS)",
+    "5": "Install the plugin: opencode plugin add /path/to/plugins/oclitellmac",
+    "6": "Add to opencode.json: {\"plugin\": [\"oclitellmac/server\", \"oclitellmac/tui\"]}",
+    "7": "Restart OpenCode to load the configuration",
+    "8": "See PATH-STRATEGY.md for detailed path management information"
+  },
+  "_example_with_optional_fields": {
+    "endpoints": [
+      {
+        "providerKey": "litellm-prod",
+        "baseUrl": "https://your-litellm-proxy.example.com",
+        "apiKey": "sk-your-api-key-here",
+        "providerName": "Production LiteLLM",
+        "enabled": true
+      }
+    ]
+  },
+  "_example_category_filtering": {
+    "description": "By default, only chat models are enabled. Non-chat models (embedding, TTS, image generation, etc.) are blacklisted to keep the model picker clean.",
+    "endpoints": [
+      {
+        "providerKey": "litellm-with-embeddings",
+        "baseUrl": "https://litellm.example.com",
+        "apiKey": "sk-key",
+        "comment": "Enable specific categories",
+        "enabledCategories": ["embedding", "audio_speech"]
+      },
+      {
+        "providerKey": "litellm-all-models",
+        "baseUrl": "https://litellm.example.com",
+        "apiKey": "sk-key",
+        "comment": "Enable all model types including non-chat",
+        "enableAllCategories": true
+      },
+      {
+        "providerKey": "litellm-chat-only",
+        "baseUrl": "https://litellm.example.com",
+        "apiKey": "sk-key",
+        "comment": "Default behavior - only chat models (no enabledCategories field needed)"
+      }
+    ],
+    "category_reference": {
+      "embedding": "Text embedding models (e.g., text-embedding-ada-002)",
+      "audio_speech": "Text-to-speech / TTS models (e.g., tts-1)",
+      "transcription": "Speech-to-text / transcription models (e.g., whisper-1)",
+      "image_generation": "Image generation models (e.g., dall-e-3)",
+      "video_generation": "Video generation models",
+      "ocr": "Document analysis / OCR models",
+      "ranking": "Reranking models",
+      "router": "Model routing / moderation models"
+    }
+  }
+}

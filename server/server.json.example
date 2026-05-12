@@ -1,0 +1,30 @@
+{
+  "endpoints": [
+    {
+      "baseUrl": "https://litellm-prod.example.com",
+      "apiKey": "sk-prod-your-api-key-here",
+      "providerName": "LiteLLM Production",
+      "providerKey": "litellm-prod",
+      "enabled": true
+    },
+    {
+      "baseUrl": "https://litellm-dev.example.com",
+      "apiKey": "sk-dev-your-api-key-here",
+      "providerName": "LiteLLM Development",
+      "providerKey": "litellm-dev",
+      "enabled": false
+    },
+    {
+      "baseUrl": "http://localhost:4000",
+      "apiKey": "sk-local-test-key",
+      "providerName": "LiteLLM Local",
+      "providerKey": "litellm-local",
+      "enabled": true
+    }
+  ],
+  "options": {
+    "timeout": 30,
+    "budgetPollInterval": 60,
+    "fallbackToCache": true
+  }
+}
