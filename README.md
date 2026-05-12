@@ -127,7 +127,7 @@ Create `~/.config/oclitellmac/server.json`:
 }
 ```
 
-See `server/config-example.json` for detailed configuration examples.
+See [`server/config-example.json`](server/config-example.json) for detailed configuration examples.
 
 ### Restart OpenCode
 
@@ -290,7 +290,7 @@ The plugin uses Unix-style paths (`.config`, `.local/state`) on all platforms to
 - ✅ Simplify documentation (same paths everywhere)
 - ✅ Allow easy path overrides via environment variables (Linux)
 
-See `PATH-STRATEGY.md` for detailed rationale and alternative approaches considered.
+See [`PATH-STRATEGY.md`](PATH-STRATEGY.md) for detailed rationale and alternative approaches considered.
 
 ### Budget Data Format
 
@@ -471,10 +471,10 @@ plugins/oclitellmac/
 
 ## Technical References
 
-- **Server Plugin**: See `server/README.md` for implementation details
-- **Server Architecture**: See `server/ARCHITECTURE.md` for modular pipeline design
-- **TUI Plugin**: See `tui/README.md` for component structure and file watching
-- **Installation Guide**: See `INSTALL.md` for step-by-step setup and verification
+- **Server Plugin**: See [`server/README.md`](server/README.md) for implementation details
+- **Server Architecture**: See [`server/ARCHITECTURE.md`](server/ARCHITECTURE.md) for modular pipeline design
+- **TUI Plugin**: See [`tui/README.md`](tui/README.md) for component structure and file watching
+- **Installation Guide**: See [`INSTALL.md`](INSTALL.md) for step-by-step setup and verification
 
 ## Requirements
 
