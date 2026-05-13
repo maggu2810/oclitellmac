@@ -38,14 +38,30 @@
   "dependencies": {
     "@opencode-ai/plugin": "latest",
     "@opencode-ai/sdk": "latest",
-    "@opentui/core": "0.2.6",
-    "@opentui/keymap": "0.2.6",
-    "@opentui/solid": "0.2.6",
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
+    "@opentui/core": "0.2.6",
+    "@opentui/keymap": "0.2.6",
+    "@opentui/solid": "0.2.6",
     "solid-js": "*",
     "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.2.6",
+    "@opentui/keymap": ">=0.2.6",
+    "@opentui/solid": ">=0.2.6"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/keymap": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    }
   }
 }

@@ -11,28 +11,30 @@ await $`bun install`.quiet()
 
 const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
 
-// Only mark `dependencies` as external — these are installed by arborist
-// and resolved at runtime from the plugin's node_modules.
+// Externalize all packages from dependencies, devDependencies, and peerDependencies.
 //
-// devDependencies (@opentui/solid, solid-js) are bundled:
-// - They are skipped by arborist during plugin install (no node_modules)
-// - OpenCode is a compiled binary — they don't exist on disk to resolve
-// - Solution: bundle them into dist/server.js and dist/tui.js
+// Why this approach:
+// - dependencies (@opencode-ai/plugin, @opencode-ai/sdk, xdg-basedir, zod):
+//   Installed by arborist during plugin install, resolved from node_modules at runtime.
 //
-// Why @opentui/core and @opentui/keymap are in dependencies (not devDependencies):
-// - Pre-bundled .js files use standard Node.js resolution (filesystem walk)
-// - Bun's embedded packages are only available for on-the-fly .tsx transpilation
-// - External imports in dist/tui.js need actual node_modules/@opentui/core
-// - Arborist installs dependencies during GitHub plugin install
-// - Result: @opentui/core installed → external imports resolve successfully
+// - devDependencies (@opentui/*, solid-js):
+//   Also declared as optional peerDependencies → arborist skips installation.
+//   OpenCode binary provides these at runtime via embedded module resolution.
+//
+// - peerDependencies (@opentui/*):
+//   Declared with peerDependenciesMeta.optional: true → arborist skips installation.
+//   Binary resolves at runtime → ensures single shared instance (critical for RendererContext).
 //
 // Version pinning requirement:
-// - @opentui/core and @opentui/keymap MUST be pinned to the exact version
-//   compiled into the OpenCode binary (check opencode repo's package.json catalog)
-// - Mismatched versions cause registerEnvVar() conflicts (different descriptions)
-// - Current OpenCode binary uses 0.2.6 (see repos/opencode/package.json catalog)
+// - @opentui/* packages in devDependencies are pinned to match the OpenCode binary version (0.2.6).
+// - Check repos/opencode/package.json catalog for the current version.
+// - Mismatched versions cause registerEnvVar() conflicts or RendererContext isolation.
 const external = [
-  ...Object.keys(pkg.dependencies ?? {}),
+  ...new Set([
+    ...Object.keys(pkg.dependencies ?? {}),
+    ...Object.keys(pkg.devDependencies ?? {}),
+    ...Object.keys(pkg.peerDependencies ?? {}),
+  ])
 ]
 
 const solidPlugin = createSolidTransformPlugin()
