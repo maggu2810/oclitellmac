@@ -5,8 +5,8 @@ import type { BudgetData } from './types'
 import { BudgetLoader } from './loader'
 import { BudgetWatcher } from './watcher'
 import { KeyInfoPanel } from './components/KeyInfoPanel'
-import { TuiLogger } from './log'
-import { getStateDir } from './paths'
+import { Logger } from './log'
+import { getStateDir, getLogDir } from './paths'
 
 const PLUGIN_ID = 'oclitellmac.tui'
 const SIDEBAR_ORDER = 125 // After context (100), before files (500)
@@ -23,7 +23,7 @@ const POLL_INTERVAL_MS = 5000 // 5 second fallback polling
  */
 const tui: TuiPlugin = async (api) => {
   // File-based logger for independent debugging
-  const logger = new TuiLogger()
+  const logger = new Logger(getLogDir(), 'tui')
   logger.log('info', '=== TUI plugin entry ===')
 
   const loader = new BudgetLoader(logger)

@@ -2,16 +2,16 @@ import { readdir, readFile } from 'fs/promises'
 import path from 'path'
 import { getBudgetDataDir } from './paths.js'
 import type { KeyInfoFile, ProviderBudget, BudgetData } from './types'
-import type { TuiLogger } from './log'
+import type { Logger } from './log'
 
 /**
  * Budget data loader - reads budget files from ~/.local/state/oclitellmac/key-info/
  */
 export class BudgetLoader {
   private budgetDataDir: string
-  private logger: TuiLogger
+  private logger: Logger
 
-  constructor(logger: TuiLogger) {
+  constructor(logger: Logger) {
     this.logger = logger
     this.budgetDataDir = getBudgetDataDir()
   }

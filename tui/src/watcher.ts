@@ -1,7 +1,7 @@
 import { watch } from 'fs'
 import type { FSWatcher } from 'fs'
 import path from 'path'
-import type { TuiLogger } from './log'
+import type { Logger } from './log'
 
 /**
  * File watcher for budget data files
@@ -16,7 +16,7 @@ export class BudgetWatcher {
   constructor(
     private stateDir: string,
     private onChange: () => void,
-    private logger: TuiLogger,
+    private logger: Logger,
     private pollInterval: number = 5000, // 5 seconds fallback polling
   ) {}
 

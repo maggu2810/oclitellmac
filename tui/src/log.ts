@@ -1,22 +1,29 @@
 import fs from 'fs'
 import path from 'path'
-import { getLogDir } from './paths'
 
 type Level = 'info' | 'warn' | 'error'
 
 /**
- * File-based logger for TUI plugin
- * 
- * Writes logs to ~/.local/state/oclitellmac/log/YYYY-MM-DD-HH-mm-ss.log
+ * File-based logger
+ *
+ * Writes logs to <logBaseDirectory>/<id>/YYYY-MM-DD-HH-mm-ss.log
  * Rotates log files every N log calls (default 500)
  * Falls back to console.error on write failures
+ *
+ * No dependency on project-specific path helpers — callers pass the base
+ * directory so this module can be shared between server and TUI.
  */
-export class TuiLogger {
+export class Logger {
   private fd: number | null = null
   private count = 0
+  private readonly logDir: string
   private readonly rotateEvery: number
 
-  constructor(rotateEvery = 500) {
+  constructor(logBaseDirectory: string, id: string, rotateEvery = 500) {
+    if (!id) {
+      throw new Error('Logger id must not be empty')
+    }
+    this.logDir = path.join(logBaseDirectory, id)
     this.rotateEvery = rotateEvery
   }
 
@@ -62,19 +69,18 @@ export class TuiLogger {
     }
 
     try {
-      const dir = getLogDir()
-      fs.mkdirSync(dir, { recursive: true })
-      
+      fs.mkdirSync(this.logDir, { recursive: true })
+
       // Format: YYYY-MM-DD-HH-mm-ss.log
       const timestamp = new Date().toISOString()
         .replace('T', '-')
         .replace(/:/g, '-')
         .slice(0, 19)
       const filename = `${timestamp}.log`
-      
-      this.fd = fs.openSync(path.join(dir, filename), 'a')
+
+      this.fd = fs.openSync(path.join(this.logDir, filename), 'a')
     } catch (err) {
-      console.error('[oclitellmac-tui] failed to open log file', err)
+      console.error('[oclitellmac] failed to open log file', err)
     }
   }
 
@@ -84,7 +90,7 @@ export class TuiLogger {
    */
   private write(level: Level, message: string): void {
     const line = `${new Date().toISOString()} [${level.toUpperCase()}] ${message}\n`
-    
+
     if (this.fd !== null) {
       try {
         fs.writeSync(this.fd, line)
@@ -93,7 +99,7 @@ export class TuiLogger {
         // fall through to console fallback
       }
     }
-    
-    console.error('[oclitellmac-tui]', line.trimEnd())
+
+    console.error('[oclitellmac]', line.trimEnd())
   }
 }
