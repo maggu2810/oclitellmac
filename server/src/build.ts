@@ -2,8 +2,8 @@
  * Model entry builder for OpenCode ModelConfig.
  */
 
-import type { Category } from "./categorize.js";
-import { mapCost, mapFlags, mapLimit, mapModalities } from "./map.js";
+import type { Category } from "./categorize";
+import { mapCost, mapFlags, mapLimit, mapModalities } from "./map";
 
 type AnyRecord = Record<string, any>;
 
