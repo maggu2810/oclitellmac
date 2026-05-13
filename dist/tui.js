@@ -2305,36 +2305,42 @@ function getStateDir() {
 function getBudgetDataDir() {
   return path.join(getStateDir(), "key-info");
 }
+function getLogDir() {
+  return path.join(getStateDir(), "log");
+}
 
 // tui/src/loader.ts
 class BudgetLoader {
   budgetDataDir;
-  log;
-  constructor(log2) {
-    this.log = log2;
+  logger;
+  constructor(logger) {
+    this.logger = logger;
     this.budgetDataDir = getBudgetDataDir();
   }
   getBudgetDataDir() {
     return this.budgetDataDir;
   }
   async loadAll() {
+    this.logger.log("info", `loadAll: starting, budgetDataDir=${this.budgetDataDir}`);
     const budgets = {};
     let errorCount = 0;
     try {
       const files = await readdir(this.budgetDataDir);
+      this.logger.log("info", `loadAll: found ${files.length} files`);
       const jsonFiles = files.filter((f) => f.endsWith(".json"));
       for (const file of jsonFiles) {
         const providerKey = file.replace(".json", "");
         const budget = await this.loadOne(providerKey);
         if (budget) {
           budgets[providerKey] = budget;
+          this.logger.log("info", `loadAll: loaded budget for ${providerKey}`);
         } else {
           errorCount++;
-          this.log("warn", `Failed to parse budget data for ${providerKey}`);
+          this.logger.log("warn", `Failed to parse budget data for ${providerKey}`);
         }
       }
     } catch (error) {
-      this.log("info", "Budget directory not found - waiting for server plugin");
+      this.logger.log("info", "Budget directory not found - waiting for server plugin");
     }
     return {
       budgets,
@@ -2348,7 +2354,7 @@ class BudgetLoader {
       const content = await readFile(filePath, "utf-8");
       const data = JSON.parse(content);
       if (!data.keyInfo?.info || typeof data.keyInfo.info.spend !== "number" || typeof data.keyInfo.info.max_budget !== "number") {
-        this.log("error", `Invalid budget data for ${data.providerKey}: missing or invalid keyInfo.info fields`);
+        this.logger.log("error", `Invalid budget data for ${data.providerKey}: missing or invalid keyInfo.info fields`);
         return null;
       }
       return {
@@ -2380,32 +2386,40 @@ import path3 from "path";
 class BudgetWatcher {
   stateDir;
   onChange;
+  logger;
   pollInterval;
   watcher = null;
   pollTimer = null;
-  constructor(stateDir, onChange, pollInterval = 5000) {
+  constructor(stateDir, onChange, logger, pollInterval = 5000) {
     this.stateDir = stateDir;
     this.onChange = onChange;
+    this.logger = logger;
     this.pollInterval = pollInterval;
   }
   start() {
+    this.logger.log("info", `watcher.start: stateDir=${this.stateDir}`);
     const keyInfoDir = path3.join(this.stateDir, "key-info");
     try {
       this.watcher = watch(keyInfoDir, { recursive: false }, (eventType, filename) => {
         if (filename && filename.endsWith(".json")) {
+          this.logger.log("info", `watcher.onChange: eventType=${eventType}, filename=${filename}`);
           this.onChange();
         }
       });
+      this.logger.log("info", "watcher.start: fs.watch started successfully");
     } catch (error) {
+      this.logger.log("warn", `watcher.start: fs.watch failed, starting polling fallback: ${error}`);
       this.startPolling();
     }
   }
   startPolling() {
+    this.logger.log("info", `watcher.startPolling: interval=${this.pollInterval}ms`);
     this.pollTimer = setInterval(() => {
       this.onChange();
     }, this.pollInterval);
   }
   stop() {
+    this.logger.log("info", "watcher.stop");
     if (this.watcher) {
       this.watcher.close();
       this.watcher = null;
@@ -2621,19 +2635,70 @@ function KeyInfoPanel(props) {
   })();
 }
 
+// tui/src/log.ts
+import fs from "fs";
+import path4 from "path";
+class TuiLogger {
+  fd = null;
+  count = 0;
+  rotateEvery;
+  constructor(rotateEvery = 500) {
+    this.rotateEvery = rotateEvery;
+  }
+  log(level, message) {
+    if (this.count % this.rotateEvery === 0) {
+      this.rotate();
+    }
+    this.write(level, message);
+    this.count++;
+  }
+  close() {
+    this.write("info", "logger closing");
+    if (this.fd !== null) {
+      try {
+        fs.closeSync(this.fd);
+      } catch {}
+      this.fd = null;
+    }
+  }
+  rotate() {
+    if (this.fd !== null) {
+      try {
+        fs.closeSync(this.fd);
+      } catch {}
+      this.fd = null;
+    }
+    try {
+      const dir = getLogDir();
+      fs.mkdirSync(dir, { recursive: true });
+      const timestamp = new Date().toISOString().replace("T", "-").replace(/:/g, "-").slice(0, 19);
+      const filename = `${timestamp}.log`;
+      this.fd = fs.openSync(path4.join(dir, filename), "a");
+    } catch (err) {
+      console.error("[oclitellmac-tui] failed to open log file", err);
+    }
+  }
+  write(level, message) {
+    const line = `${new Date().toISOString()} [${level.toUpperCase()}] ${message}
+`;
+    if (this.fd !== null) {
+      try {
+        fs.writeSync(this.fd, line);
+        return;
+      } catch {}
+    }
+    console.error("[oclitellmac-tui]", line.trimEnd());
+  }
+}
+
 // tui/src/index.tsx
 var PLUGIN_ID = "oclitellmac.tui";
 var SIDEBAR_ORDER = 125;
 var POLL_INTERVAL_MS = 5000;
 var tui = async (api) => {
-  const log2 = (level, message) => {
-    api.client.app.log({
-      service: "oclitellmac-tui",
-      level,
-      message
-    }).catch(() => {});
-  };
-  const loader = new BudgetLoader(log2);
+  const logger = new TuiLogger;
+  logger.log("info", "=== TUI plugin entry ===");
+  const loader = new BudgetLoader(logger);
   const [budgetData, setBudgetData] = createSignal({});
   const [loadStatus, setLoadStatus] = createSignal({
     hasErrors: false,
@@ -2647,17 +2712,27 @@ var tui = async (api) => {
       errorCount: result.errorCount
     });
   }
+  logger.log("info", "calling refreshBudgets()");
   await refreshBudgets();
-  const watcher = new BudgetWatcher(loader.getBudgetDataDir(), () => {
+  logger.log("info", `refreshBudgets() complete, loaded ${Object.keys(budgetData()).length} budgets`);
+  const watcher = new BudgetWatcher(getStateDir(), () => {
     refreshBudgets().catch((error) => {
-      log2("error", `Failed to refresh budgets: ${error instanceof Error ? error.message : String(error)}`);
+      logger.log("error", `Failed to refresh budgets: ${error instanceof Error ? error.message : String(error)}`);
     });
-  }, POLL_INTERVAL_MS);
+  }, logger, POLL_INTERVAL_MS);
+  logger.log("info", "starting watcher");
   watcher.start();
+  logger.log("info", "watcher started");
+  let sidebarRendered = false;
+  logger.log("info", `registering sidebar slot, order=${SIDEBAR_ORDER}`);
   api.slots.register({
     order: SIDEBAR_ORDER,
     slots: {
       sidebar_content(_ctx, props) {
+        if (!sidebarRendered) {
+          logger.log("info", `sidebar_content: first render, session_id=${props.session_id}`);
+          sidebarRendered = true;
+        }
         return createComponent2(KeyInfoPanel, {
           api,
           get sessionId() {
@@ -2673,8 +2748,10 @@ var tui = async (api) => {
       }
     }
   });
+  logger.log("info", "sidebar slot registered");
   api.lifecycle.onDispose(() => {
     watcher.stop();
+    logger.close();
   });
 };
 var plugin = {
