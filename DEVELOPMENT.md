@@ -112,8 +112,8 @@ Packages compiled into the OpenCode binary. Special handling required based on i
 |---|---|---|
 | `@opentui/solid` | `devDependencies`, **not** external → bundled | Pure JSX helpers, safe to bundle |
 | `solid-js` | `devDependencies`, **not** external → bundled | Pure reactive primitives, safe to bundle |
-| `@opentui/core` | `dependencies` + `external` → installed by arborist | Bun resolves embedded packages only for .tsx; pre-bundled .js needs node_modules |
-| `@opentui/keymap` | `dependencies` + `external` → installed by arborist | Same reason as @opentui/core |
+| `@opentui/core` | `dependencies` (pinned version) + `external` | Bun resolves embedded packages only for .tsx; pre-bundled .js needs node_modules |
+| `@opentui/keymap` | `dependencies` (pinned version) + `external` | Same reason as @opentui/core |
 
 **Why `@opentui/core` and `@opentui/keymap` must be in `dependencies`:**
 
@@ -122,6 +122,26 @@ Packages compiled into the OpenCode binary. Special handling required based on i
 - `dist/tui.js` has `import { ... } from "@opentui/core"` (external) → needs real `node_modules/@opentui/core`
 - Adding to `dependencies` → arborist installs during GitHub plugin install → external imports resolve
 - Bundling them would include 4.7MB of tree-sitter WASM files → bloat and potential conflicts
+
+**Critical: Version Pinning Requirement**
+
+`@opentui/core` and `@opentui/keymap` **MUST** be pinned to the **exact version** compiled into the OpenCode binary:
+
+- Mismatched versions cause fatal crashes: `registerEnvVar()` throws if env var descriptions differ between versions
+- Even minor version bumps (0.2.6 → 0.2.8) change descriptions: `"Path to the TreeSitter worker"` → `"Path to the TreeSitter worker entry script"`
+- The plugin loads `@opentui/core` from its own `node_modules`, which calls `registerEnvVar()` with the new description
+- The binary already registered the same env var with the old description → conflict → crash
+
+**How to find the correct version:**
+
+1. Check the OpenCode source repository you're targeting
+2. Look in `repos/opencode/package.json` under `"catalog"` section
+3. Find `"@opentui/core": "X.Y.Z"` and `"@opentui/keymap": "X.Y.Z"`
+4. Pin to exactly those versions in this plugin's `dependencies`
+
+**Current pinned versions:** `0.2.6` (matches OpenCode binary compiled from `repos/opencode` dev branch as of 2026-05-13)
+
+**Maintenance note:** When OpenCode updates `@opentui/*` packages, this plugin must be updated to match. This is a known limitation of the pre-bundled `.js` approach.
 
 #### Group 2: Independently Installed Packages
 
@@ -143,15 +163,15 @@ These go in `dependencies`, are marked `external` in the build, and arborist ins
   "dependencies": {
     "@opencode-ai/plugin": "latest",
     "@opencode-ai/sdk": "latest",
-    "@opentui/core": "*",       // External (needs node_modules for .js resolution)
-    "@opentui/keymap": "*",     // External (needs node_modules for .js resolution)
+    "@opentui/core": "0.2.6",     // Pinned - MUST match OpenCode binary version
+    "@opentui/keymap": "0.2.6",   // Pinned - MUST match OpenCode binary version
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@opentui/solid": "*",      // Bundled (safe, needed for JSX)
-    "solid-js": "*",            // Bundled (safe)
-    "typescript": "^5.6.0"      // Dev-only (type checking)
+    "@opentui/solid": "*",        // Bundled (safe, needed for JSX)
+    "solid-js": "*",              // Bundled (safe)
+    "typescript": "^5.6.0"        // Dev-only (type checking)
   }
 }
 ```

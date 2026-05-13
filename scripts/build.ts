@@ -25,6 +25,12 @@ const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
 // - External imports in dist/tui.js need actual node_modules/@opentui/core
 // - Arborist installs dependencies during GitHub plugin install
 // - Result: @opentui/core installed → external imports resolve successfully
+//
+// Version pinning requirement:
+// - @opentui/core and @opentui/keymap MUST be pinned to the exact version
+//   compiled into the OpenCode binary (check opencode repo's package.json catalog)
+// - Mismatched versions cause registerEnvVar() conflicts (different descriptions)
+// - Current OpenCode binary uses 0.2.6 (see repos/opencode/package.json catalog)
 const external = [
   ...Object.keys(pkg.dependencies ?? {}),
 ]
