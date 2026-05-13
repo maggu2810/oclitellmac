@@ -14,6 +14,9 @@
   "scripts": {
     "compile": "bun scripts/build.ts"
   },
+  "files": [
+    "dist/"
+  ],
   "keywords": [
     "opencode",
     "plugin",

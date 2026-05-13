@@ -33,6 +33,19 @@ The build produces:
 
 These files are gitignored on the `main` branch but committed on `dist-*` release branches.
 
+### Files Field Requirement
+
+The `package.json` includes a `"files": ["dist/"]` field. This is **critical** for GitHub installs:
+
+**Why it's needed:**
+- When installing via `opencode plugin github:...`, pacote packs the repo into a tarball
+- Without the `files` field, pacote reads `.gitignore` and excludes `dist/` from the pack
+- Result: `dist/` exists on the branch but is missing from the installed package → "Cannot find module" errors
+
+**The `files` field explicitly lists what to include**, overriding `.gitignore`. Only `dist/` and `package.json` (always included) are packed into the tarball.
+
+**IMPORTANT:** Do not remove the `files` field or add additional patterns unless intentional.
+
 ### Script Naming Constraint
 
 ⚠️ **IMPORTANT:** The script must NOT be named any of the following:
