@@ -1,5 +1,5 @@
 {
-  "name": "oclitellmac",
+  "name": "@maggu2810/oclitellmac",
   "version": "0.1.0",
   "description": "OpenCode LiteLLM Auto-Config - Automatic multi-proxy configuration with budget tracking",
   "type": "module",
