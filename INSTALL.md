@@ -39,21 +39,34 @@ cd oclitellmac
 npm install
 
 # Register with OpenCode
-opencode plugin add .
+opencode plugin .
 ```
 
 ### 1. Configure OpenCode (Local Path Only)
 
-**Note**: GitHub URL installation adds these automatically.
+**Note**: `opencode plugin .` does this automatically. Manual editing is only needed as a fallback.
 
-Edit your `~/.config/opencode/opencode.json` (or project-local `opencode.json`):
+For **local config**, edit `.opencode/opencode.json` (or `.opencode/opencode.jsonc`) and `.opencode/tui.json` (or `.opencode/tui.jsonc`) separately:
+
+`.opencode/opencode.json`:
+```json
+{
+  "plugin": ["./oclitellmac"]
+}
+```
+
+`.opencode/tui.json`:
+```json
+{
+  "plugin": ["./oclitellmac"]
+}
+```
+
+For **global config**, use absolute paths in `~/.config/opencode/opencode.json` (or `.jsonc`) and `~/.config/opencode/tui.json` (or `.jsonc`):
 
 ```json
 {
-  "plugin": [
-    "oclitellmac/server",
-    "oclitellmac/tui"
-  ]
+  "plugin": ["/absolute/path/to/oclitellmac"]
 }
 ```
 
