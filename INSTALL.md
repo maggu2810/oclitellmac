@@ -246,21 +246,26 @@ Check:
 
 ## Development
 
-### Type Check
+See [DEVELOPMENT.md](DEVELOPMENT.md) for:
+- **Import style conventions** (extensionless imports required)
+- Type checking instructions
+- Testing local and GitHub installs
+- Troubleshooting common issues
+
+**Quick Reference:**
 
 ```bash
-cd plugins/oclitellmac
+# Type check
 npx tsc --noEmit
+
+# Test local install
+opencode plugin .
+
+# Test GitHub install
+opencode plugin github:maggu2810/oclitellmac
 ```
 
-Note: Errors about missing Node.js types and peer dependencies are expected.
-
-### Update Sources
-
-When modifying sources:
-1. Edit files in `server/src/` or `tui/src/`
-2. Run type check
-3. Reload OpenCode to test changes
+Note: Peer dependency warnings during type check are expected and can be ignored.
 
 ## File Structure
 
