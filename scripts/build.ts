@@ -11,9 +11,23 @@ await $`bun install`.quiet()
 
 const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
 
+// Only mark `dependencies` as external — these are installed by arborist
+// and resolved at runtime from the plugin's node_modules.
+//
+// devDependencies (@opentui/solid, solid-js, etc.) are NOT marked external:
+// - They are skipped by arborist during plugin install (no node_modules)
+// - OpenCode is a compiled binary — they don't exist on disk to resolve
+// - Solution: bundle them into dist/tui.js so they're self-contained
+//
+// Exception: @opentui/core and @opentui/keymap MUST be external even though
+// they're in devDependencies, because:
+// - @opentui/solid internally imports @opentui/core
+// - @opentui/core registers global state — bundling causes duplicates
+// - OpenCode provides these at runtime via the binary's internal resolution
 const external = [
   ...Object.keys(pkg.dependencies ?? {}),
-  ...Object.keys(pkg.devDependencies ?? {}),
+  "@opentui/core",
+  "@opentui/keymap",
 ]
 
 const solidPlugin = createSolidTransformPlugin()

@@ -48,49 +48,186 @@ These files are gitignored on the `main` branch but committed on `dist-*` releas
 
 Using a custom name like `compile` avoids this trigger, allowing pacote to skip the preparation step and directly pack the plugin for installation.
 
-### Dependency Classification
+---
 
-#### Why `peerDependencies` Must Not Be Used
+## Dependency Management
 
-**Do not declare `@opentui/*` or `solid-js` in `peerDependencies`.** When OpenCode installs the plugin via `opencode plugin github:...`, arborist installs both `dependencies` **and** `peerDependencies` into the plugin's own `node_modules`. This causes packages like `@opentui/core` to be loaded twice in the same process:
+This section explains how dependencies work in this plugin and provides rules for adding new dependencies correctly.
 
-1. Once from OpenCode's own `node_modules` (the correct copy)
+### npm Dependency Types — Overview
+
+| Type | Installed when? | Purpose |
+|---|---|---|
+| `dependencies` | Always — both `bun install` (dev) and arborist (plugin install) | Packages needed at **runtime** by the plugin |
+| `devDependencies` | Only `bun install` (dev) — **skipped** by arborist during plugin install | Tools, types, and packages only needed during development/build |
+| `peerDependencies` | Modern npm/bun: installed automatically (v7+) | Packages the consumer is expected to provide — **DO NOT USE** in this plugin |
+
+**Key takeaway for our plugin:**
+
+- Arborist (OpenCode's plugin installer) installs `dependencies` + `peerDependencies`, skips `devDependencies`
+- We only want arborist to install `dependencies`
+- Therefore: everything that must NOT end up in the plugin's `node_modules` → `devDependencies`
+
+### Bun Build `external` — What It Means
+
+When compiling with `Bun.build()`, the `external` option controls what gets **bundled into the output file vs. left as a runtime import**:
+
+| Status | In `dist/tui.js` | Resolved at runtime from... |
+|---|---|---|
+| **Bundled** (not external) | Code is inlined into the file | Nowhere — it's already compiled into the file |
+| **External** | `import { foo } from "pkg"` remains | Must exist in `node_modules` at runtime |
+
+**Key takeaway:** If you mark something as `external`, it must exist on disk at runtime where the plugin loads. For OpenCode GitHub installs, the only `node_modules` available are packages arborist installed (i.e., only `dependencies`).
+
+### The OpenCode Binary Problem
+
+**OpenCode is a compiled binary** — packages like `@opentui/solid`, `@opentui/core`, and `solid-js` are compiled into it. They do **not** exist as files on disk in `node_modules` anywhere. This means:
+
+- Runtime `import` resolution cannot find them
+- Marking them as `external` in the build fails (module not found)
+- Marking them as `peerDependencies` or `dependencies` causes duplicates (loaded twice → crashes)
+
+**The solution:** Bundle safe packages (no global state) into `dist/tui.js`, keep unsafe packages (register globals) as `external` and rely on OpenCode's internal resolution.
+
+### Package Groups
+
+#### Group 1: OpenCode Host Packages
+
+Packages compiled into the OpenCode binary. They must never be installed into the plugin's `node_modules`.
+
+| Package | Safe to bundle? | Handling |
+|---|---|---|
+| `@opentui/solid` | ✅ Yes (pure JSX helpers, no global state) | `devDependencies`, **not** external → bundled into `dist/tui.js` |
+| `solid-js` | ✅ Yes (pure reactive primitives, no global state) | `devDependencies`, **not** external → bundled into `dist/tui.js` |
+| `@opentui/core` | ❌ No (registers global env vars, tree-sitter) | `devDependencies` + **external** → resolved from OpenCode binary at runtime |
+| `@opentui/keymap` | ❌ No (likely same pattern as core) | `devDependencies` + **external** → resolved from OpenCode binary at runtime |
+
+**Why `@opentui/core` and `@opentui/keymap` must be external:**
+
+- `@opentui/solid` internally imports `@opentui/core` (check `node_modules/@opentui/solid/index.js`)
+- If bundled, `@opentui/core` loads twice: once from the binary, once from the bundle
+- Duplicate registration of global state (env vars, tree-sitter worker) → fatal crash:
+  ```
+  Error: Environment variable "OTUI_TREE_SITTER_WORKER_PATH" is already registered
+  with different configuration
+  ```
+
+#### Group 2: Independently Installed Packages
+
+Packages **not** in the OpenCode binary. These must be installed at runtime.
+
+| Package | Handling |
+|---|---|
+| `@opencode-ai/plugin` | `dependencies` + `external` |
+| `@opencode-ai/sdk` | `dependencies` + `external` |
+| `xdg-basedir` | `dependencies` + `external` |
+| `zod` | `dependencies` + `external` |
+
+These go in `dependencies`, are marked `external` in the build, and arborist installs them into the plugin's `node_modules` during GitHub install.
+
+### Current Configuration Summary
+
+```json
+{
+  "dependencies": {
+    "@opencode-ai/plugin": "latest",
+    "@opencode-ai/sdk": "latest",
+    "xdg-basedir": "^5.1.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@opentui/core": "*",       // External (unsafe to bundle)
+    "@opentui/keymap": "*",     // External (unsafe to bundle)
+    "@opentui/solid": "*",      // Bundled (safe, needed for JSX)
+    "solid-js": "*",            // Bundled (safe)
+    "typescript": "^5.6.0"      // Dev-only (type checking)
+  }
+}
+```
+
+**Build script (`scripts/build.ts`) logic:**
+
+```ts
+const external = [
+  ...Object.keys(pkg.dependencies ?? {}),  // Always external
+  "@opentui/core",                          // Unsafe to bundle
+  "@opentui/keymap",                        // Unsafe to bundle
+]
+// @opentui/solid and solid-js are NOT in external → bundled into dist/tui.js
+```
+
+### Rules for Adding New Dependencies
+
+When adding a new dependency, ask these questions:
+
+#### 1. Is it needed at runtime (in the compiled `dist/` output)?
+
+- **No** → `devDependencies`, not external (won't appear in dist output)
+  - Example: `eslint`, `prettier`, build tools
+- **Yes** → Continue to question 2
+
+#### 2. Is it compiled into the OpenCode binary?
+
+- **No** → `dependencies` + `external` (arborist installs it, dist imports it from `node_modules`)
+  - Example: `zod`, `xdg-basedir`, npm packages OpenCode doesn't bundle
+- **Yes** → Continue to question 3
+
+#### 3. Does it register global state / singletons?
+
+- **Yes** → `devDependencies` + **external** (do NOT bundle — will conflict)
+  - Add it to the `external` array in `scripts/build.ts`
+  - Example: `@opentui/core`, `@opentui/keymap`
+- **No** → `devDependencies`, **not** external (bundle it into dist)
+  - Example: `@opentui/solid`, `solid-js`
+
+#### Decision Table
+
+| Scenario | `package.json` | Build `external`? | Result |
+|---|---|---|---|
+| npm package, runtime needed | `dependencies` | ✅ Yes (auto via `Object.keys(dependencies)`) | Arborist installs, dist imports from `node_modules` |
+| OpenCode binary package, safe to bundle | `devDependencies` | ❌ No | Bundled into `dist/tui.js` |
+| OpenCode binary package, unsafe to bundle | `devDependencies` | ✅ Yes (explicit in build script) | Resolved from OpenCode binary at runtime |
+| Dev tool only | `devDependencies` | ❌ No | Not included in dist at all |
+
+### Examples
+
+**Adding a new npm package for runtime use:**
+
+```json
+"dependencies": {
+  "my-new-package": "^1.0.0"  // Automatically marked external by build script
+}
+```
+
+**Adding an OpenCode package that's safe to bundle:**
+
+1. Check if it has global state (look for env var registration, singletons, etc.)
+2. If safe: add to `devDependencies`, do **not** add to `external` in `scripts/build.ts`
+
+**Adding an OpenCode package with global state:**
+
+1. Add to `devDependencies`
+2. Add to `external` array in `scripts/build.ts`:
+   ```ts
+   const external = [
+     ...Object.keys(pkg.dependencies ?? {}),
+     "@opentui/core",
+     "@opentui/keymap",
+     "@my/new-package",  // Add here
+   ]
+   ```
+
+### Why `peerDependencies` Must Never Be Used
+
+Modern npm (v7+) and bun **automatically install** `peerDependencies`. When OpenCode installs the plugin via `opencode plugin github:...`, arborist installs both `dependencies` **and** `peerDependencies` into the plugin's own `node_modules`.
+
+This causes packages like `@opentui/core` to be loaded twice:
+1. Once from OpenCode's binary (the correct copy)
 2. Once from the plugin's `node_modules` (duplicate)
 
-This triggers fatal errors at startup:
+Result: duplicate global state registration → fatal crash.
 
-```
-Error: Environment variable "OTUI_TREE_SITTER_WORKER_PATH" is already registered
-with different configuration
-```
-
-The duplicate registration happens because both copies of `@opentui/core` try to initialize the same global state.
-
-#### Why `devDependencies` Is Correct
-
-Arborist **skips** `devDependencies` during plugin installation, so they never appear in the plugin's `node_modules`. At runtime:
-
-- `dist/tui.js` imports `@opentui/solid`, `solid-js`, etc. by name
-- Bun's module resolution walks up the directory tree
-- It finds OpenCode's own `node_modules` and uses the single correct copy
-
-Locally during development:
-
-- `bun install` installs `devDependencies` normally
-- The IDE gets full type information and autocomplete
-- `scripts/build.ts` can import `@opentui/solid/bun-plugin` for JSX compilation
-
-#### Which `devDependencies` Serve Which Purpose
-
-| Package | Purpose |
-|---|---|
-| `@opentui/core` | IDE types only (imported in TUI source; resolved from OpenCode at runtime) |
-| `@opentui/keymap` | IDE types only (same as above) |
-| `@opentui/solid` | IDE types + build script (`createSolidTransformPlugin` in `scripts/build.ts`) |
-| `solid-js` | IDE types only (imported in TUI source; resolved from OpenCode at runtime) |
-| `typescript` | Type checking only (`npx tsc --noEmit`) |
-
-**Key principle:** Packages used at runtime by the plugin must be marked `external` in the build (which we do automatically in `scripts/build.ts`) and must NOT appear in `dependencies` or `peerDependencies`. They are resolved from OpenCode's environment at runtime.
+**Solution:** Never use `peerDependencies`. Use `devDependencies` instead — arborist skips them during plugin install.
 
 ---
 
