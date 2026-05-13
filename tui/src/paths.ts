@@ -55,3 +55,13 @@ export function getStateDir(): string {
 export function getBudgetDataDir(): string {
   return path.join(getStateDir(), "key-info")
 }
+
+/**
+ * Get log directory
+ * Returns: ~/.local/state/oclitellmac/log
+ * 
+ * Used for: TUI plugin debug logs
+ */
+export function getLogDir(): string {
+  return path.join(getStateDir(), "log")
+}

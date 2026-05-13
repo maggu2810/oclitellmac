@@ -2,16 +2,17 @@ import { readdir, readFile } from 'fs/promises'
 import path from 'path'
 import { getBudgetDataDir } from './paths.js'
 import type { KeyInfoFile, ProviderBudget, BudgetData } from './types'
+import type { TuiLogger } from './log'
 
 /**
  * Budget data loader - reads budget files from ~/.local/state/oclitellmac/key-info/
  */
 export class BudgetLoader {
   private budgetDataDir: string
-  private log: (level: 'info' | 'error' | 'warn', message: string) => void
+  private logger: TuiLogger
 
-  constructor(log: (level: 'info' | 'error' | 'warn', message: string) => void) {
-    this.log = log
+  constructor(logger: TuiLogger) {
+    this.logger = logger
     this.budgetDataDir = getBudgetDataDir()
   }
 
@@ -26,11 +27,13 @@ export class BudgetLoader {
    * Load all budget files from key-info directory
    */
   async loadAll(): Promise<{ budgets: BudgetData; hasErrors: boolean; errorCount: number }> {
+    this.logger.log('info', `loadAll: starting, budgetDataDir=${this.budgetDataDir}`)
     const budgets: BudgetData = {}
     let errorCount = 0
 
     try {
       const files = await readdir(this.budgetDataDir)
+      this.logger.log('info', `loadAll: found ${files.length} files`)
       const jsonFiles = files.filter(f => f.endsWith('.json'))
 
       for (const file of jsonFiles) {
@@ -39,14 +42,15 @@ export class BudgetLoader {
 
         if (budget) {
           budgets[providerKey] = budget
+          this.logger.log('info', `loadAll: loaded budget for ${providerKey}`)
         } else {
           errorCount++
-          this.log('warn', `Failed to parse budget data for ${providerKey}`)
+          this.logger.log('warn', `Failed to parse budget data for ${providerKey}`)
         }
       }
     } catch (error) {
       // Directory doesn't exist yet or is inaccessible
-      this.log('info', 'Budget directory not found - waiting for server plugin')
+      this.logger.log('info', 'Budget directory not found - waiting for server plugin')
     }
 
     return {
@@ -72,7 +76,7 @@ export class BudgetLoader {
         typeof data.keyInfo.info.spend !== 'number' ||
         typeof data.keyInfo.info.max_budget !== 'number'
       ) {
-        this.log('error', `Invalid budget data for ${data.providerKey}: missing or invalid keyInfo.info fields`)
+        this.logger.log('error', `Invalid budget data for ${data.providerKey}: missing or invalid keyInfo.info fields`)
         return null
       }
 
