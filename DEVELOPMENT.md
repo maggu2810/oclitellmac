@@ -106,24 +106,22 @@ When compiling with `Bun.build()`, the `external` option controls what gets **bu
 
 #### Group 1: OpenCode Host Packages
 
-Packages compiled into the OpenCode binary. They must never be installed into the plugin's `node_modules`.
+Packages compiled into the OpenCode binary. Special handling required based on import context.
 
-| Package | Safe to bundle? | Handling |
+| Package | Handling | Rationale |
 |---|---|---|
-| `@opentui/solid` | ✅ Yes (pure JSX helpers, no global state) | `devDependencies`, **not** external → bundled into `dist/tui.js` |
-| `solid-js` | ✅ Yes (pure reactive primitives, no global state) | `devDependencies`, **not** external → bundled into `dist/tui.js` |
-| `@opentui/core` | ❌ No (registers global env vars, tree-sitter) | `devDependencies` + **external** → resolved from OpenCode binary at runtime |
-| `@opentui/keymap` | ❌ No (likely same pattern as core) | `devDependencies` + **external** → resolved from OpenCode binary at runtime |
+| `@opentui/solid` | `devDependencies`, **not** external → bundled | Pure JSX helpers, safe to bundle |
+| `solid-js` | `devDependencies`, **not** external → bundled | Pure reactive primitives, safe to bundle |
+| `@opentui/core` | `dependencies` + `external` → installed by arborist | Bun resolves embedded packages only for .tsx; pre-bundled .js needs node_modules |
+| `@opentui/keymap` | `dependencies` + `external` → installed by arborist | Same reason as @opentui/core |
 
-**Why `@opentui/core` and `@opentui/keymap` must be external:**
+**Why `@opentui/core` and `@opentui/keymap` must be in `dependencies`:**
 
-- `@opentui/solid` internally imports `@opentui/core` (check `node_modules/@opentui/solid/index.js`)
-- If bundled, `@opentui/core` loads twice: once from the binary, once from the bundle
-- Duplicate registration of global state (env vars, tree-sitter worker) → fatal crash:
-  ```
-  Error: Environment variable "OTUI_TREE_SITTER_WORKER_PATH" is already registered
-  with different configuration
-  ```
+- Bun's embedded packages (compiled into the binary) are available for **on-the-fly `.tsx` transpilation** only
+- Pre-bundled `.js` files (like `dist/tui.js`) use standard Node.js resolution (filesystem `node_modules` walk)
+- `dist/tui.js` has `import { ... } from "@opentui/core"` (external) → needs real `node_modules/@opentui/core`
+- Adding to `dependencies` → arborist installs during GitHub plugin install → external imports resolve
+- Bundling them would include 4.7MB of tree-sitter WASM files → bloat and potential conflicts
 
 #### Group 2: Independently Installed Packages
 
@@ -145,12 +143,12 @@ These go in `dependencies`, are marked `external` in the build, and arborist ins
   "dependencies": {
     "@opencode-ai/plugin": "latest",
     "@opencode-ai/sdk": "latest",
+    "@opentui/core": "*",       // External (needs node_modules for .js resolution)
+    "@opentui/keymap": "*",     // External (needs node_modules for .js resolution)
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@opentui/core": "*",       // External (unsafe to bundle)
-    "@opentui/keymap": "*",     // External (unsafe to bundle)
     "@opentui/solid": "*",      // Bundled (safe, needed for JSX)
     "solid-js": "*",            // Bundled (safe)
     "typescript": "^5.6.0"      // Dev-only (type checking)
@@ -162,11 +160,9 @@ These go in `dependencies`, are marked `external` in the build, and arborist ins
 
 ```ts
 const external = [
-  ...Object.keys(pkg.dependencies ?? {}),  // Always external
-  "@opentui/core",                          // Unsafe to bundle
-  "@opentui/keymap",                        // Unsafe to bundle
+  ...Object.keys(pkg.dependencies ?? {}),  // Always external (installed by arborist)
 ]
-// @opentui/solid and solid-js are NOT in external → bundled into dist/tui.js
+// devDependencies (@opentui/solid, solid-js) are bundled into dist/ files
 ```
 
 ### Rules for Adding New Dependencies
@@ -185,21 +181,21 @@ When adding a new dependency, ask these questions:
   - Example: `zod`, `xdg-basedir`, npm packages OpenCode doesn't bundle
 - **Yes** → Continue to question 3
 
-#### 3. Does it register global state / singletons?
+#### 3. Can it be safely bundled into dist/ files?
 
-- **Yes** → `devDependencies` + **external** (do NOT bundle — will conflict)
-  - Add it to the `external` array in `scripts/build.ts`
-  - Example: `@opentui/core`, `@opentui/keymap`
-- **No** → `devDependencies`, **not** external (bundle it into dist)
+- **Yes (pure library, no WASM/assets)** → `devDependencies`, **not** external (bundle it)
   - Example: `@opentui/solid`, `solid-js`
+- **No (includes WASM, large assets, or needs .tsx context)** → `dependencies` + `external`
+  - Add it to `dependencies` so arborist installs it
+  - Example: `@opentui/core` (4.7MB tree-sitter WASM), `@opentui/keymap`
 
 #### Decision Table
 
 | Scenario | `package.json` | Build `external`? | Result |
 |---|---|---|---|
 | npm package, runtime needed | `dependencies` | ✅ Yes (auto via `Object.keys(dependencies)`) | Arborist installs, dist imports from `node_modules` |
-| OpenCode binary package, safe to bundle | `devDependencies` | ❌ No | Bundled into `dist/tui.js` |
-| OpenCode binary package, unsafe to bundle | `devDependencies` | ✅ Yes (explicit in build script) | Resolved from OpenCode binary at runtime |
+| OpenCode binary package, safe to bundle (small, pure) | `devDependencies` | ❌ No | Bundled into `dist/` files |
+| OpenCode binary package, unsafe to bundle (WASM/assets) | `dependencies` | ✅ Yes (auto via `Object.keys(dependencies)`) | Arborist installs, dist imports from `node_modules` |
 | Dev tool only | `devDependencies` | ❌ No | Not included in dist at all |
 
 ### Examples
@@ -214,21 +210,15 @@ When adding a new dependency, ask these questions:
 
 **Adding an OpenCode package that's safe to bundle:**
 
-1. Check if it has global state (look for env var registration, singletons, etc.)
-2. If safe: add to `devDependencies`, do **not** add to `external` in `scripts/build.ts`
+1. Check if it includes WASM files or large assets (look in `node_modules/@pkg/assets/` or check bundle size)
+2. If small and pure (no WASM): add to `devDependencies`, do **not** add to `external`
+3. If includes WASM/assets: add to `dependencies` (auto-external via `Object.keys(dependencies)`)
 
-**Adding an OpenCode package with global state:**
+**Adding an OpenCode package with WASM or large assets:**
 
-1. Add to `devDependencies`
-2. Add to `external` array in `scripts/build.ts`:
-   ```ts
-   const external = [
-     ...Object.keys(pkg.dependencies ?? {}),
-     "@opentui/core",
-     "@opentui/keymap",
-     "@my/new-package",  // Add here
-   ]
-   ```
+1. Add to `dependencies` (not `devDependencies`)
+2. Arborist will install it, external imports will resolve from `node_modules`
+3. No changes needed to `scripts/build.ts` — auto-external via `Object.keys(dependencies)`
 
 ### Why `peerDependencies` Must Never Be Used
 
