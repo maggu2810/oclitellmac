@@ -1,4 +1,3 @@
-// @bun
 // tui/src/index.tsx
 import { createComponent as _$createComponent2 } from "@opentui/solid";
 import { createSignal } from "solid-js";
@@ -183,7 +182,7 @@ function formatProgressBar(value, max, width = 20) {
   const percent = Math.min(1, safeValue / safeMax);
   const filled = Math.round(percent * width);
   const empty = width - filled;
-  return "\u2588".repeat(filled) + "\u2591".repeat(empty);
+  return "█".repeat(filled) + "░".repeat(empty);
 }
 function formatRelativeTime(isoString) {
   try {

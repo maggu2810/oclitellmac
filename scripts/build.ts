@@ -63,7 +63,7 @@ const tuiResult = await Bun.build({
   outdir: "./dist",
   naming: "tui.js",
   format: "esm",
-  target: "bun",
+  target: "node",
   plugins: [solidPlugin],
   external,
 })
