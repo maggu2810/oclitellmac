@@ -38,8 +38,8 @@
   "dependencies": {
     "@opencode-ai/plugin": "latest",
     "@opencode-ai/sdk": "latest",
-    "@opentui/core": "*",
-    "@opentui/keymap": "*",
+    "@opentui/core": "0.2.6",
+    "@opentui/keymap": "0.2.6",
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },
