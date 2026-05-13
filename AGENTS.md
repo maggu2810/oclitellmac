@@ -29,6 +29,9 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 For AGENTS.md conventions and token cost optimization:
 Read @docs/agents-file-conventions.md
 
+When working on code or understanding import conventions and development setup:
+Read @DEVELOPMENT.md
+
 When understanding OpenCode plugin CLI commands and spec formats:
 Read @docs/opencode-plugin-cli.md
 
