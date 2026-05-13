@@ -2,8 +2,8 @@
  * Blacklist filter for non-chat models.
  */
 
-import type { Category } from "./categorize.js";
-import { NON_CHAT_CATEGORIES } from "./categorize.js";
+import type { Category } from "./categorize";
+import { NON_CHAT_CATEGORIES } from "./categorize";
 
 /**
  * Return [model_id, category] pairs for the provider blacklist.

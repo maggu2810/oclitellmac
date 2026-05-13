@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { readFile } from "fs/promises"
-import { getConfigPath } from "./paths.js"
+import { getConfigPath } from "./paths"
 import type { Category } from "./categorize"
 
 // Valid non-chat category names
@@ -60,4 +60,4 @@ export async function loadConfig(): Promise<ServerConfig> {
  * Export getConfigPath from paths module for convenience
  * (Re-exported to maintain backward compatibility if used elsewhere)
  */
-export { getConfigPath } from "./paths.js"
+export { getConfigPath } from "./paths"

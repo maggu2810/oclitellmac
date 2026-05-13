@@ -1,6 +1,6 @@
 import { readdir, readFile } from 'fs/promises'
 import path from 'path'
-import { getBudgetDataDir } from './paths.js'
+import { getBudgetDataDir } from './paths'
 import type { KeyInfoFile, ProviderBudget, BudgetData } from './types'
 import type { Logger } from './log'
 

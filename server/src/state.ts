@@ -1,6 +1,6 @@
 import { mkdir, readFile, writeFile } from "fs/promises"
 import path from "path"
-import { getProviderCacheDir, getBudgetDataDir } from "./paths.js"
+import { getProviderCacheDir, getBudgetDataDir } from "./paths"
 
 /**
  * State manager with file locking to prevent concurrent write collisions
