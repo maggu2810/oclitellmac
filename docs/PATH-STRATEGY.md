@@ -321,7 +321,7 @@ However, maintaining consistency with OpenCode core should remain the primary go
 - [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html)
 - [xdg-basedir npm package](https://www.npmjs.com/package/xdg-basedir)
 - [env-paths npm package](https://www.npmjs.com/package/env-paths)
-- [OpenCode core global.ts](../../repos/opencode/packages/core/src/global.ts)
+- [OpenCode core global.ts](https://github.com/anomalyco/opencode/blob/dev/packages/core/src/global.ts)
 
 ## Summary
 

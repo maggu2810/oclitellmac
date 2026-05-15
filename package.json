@@ -36,8 +36,8 @@
   },
   "homepage": "https://github.com/maggu2810/oclitellmac#readme",
   "dependencies": {
-    "@opencode-ai/plugin": "latest",
-    "@opencode-ai/sdk": "latest",
+    "@opencode-ai/plugin": "^1.15.0",
+    "@opencode-ai/sdk": "^1.15.0",
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },

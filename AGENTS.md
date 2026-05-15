@@ -10,9 +10,9 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 
 ## Critical Constants
 
-- **Config**: `~/.config/oclitellmac/server.json` (XDG-compliant, see PATH-STRATEGY.md)
+- **Config**: `~/.config/oclitellmac/server.json` (XDG-compliant, see docs/PATH-STRATEGY.md)
 - **State**: `~/.local/state/oclitellmac/` (providers cache, budget data)
-- **Installation**: `opencode plugin github:maggu2810/oclitellmac` or `opencode plugin <path>`
+- **Installation**: `opencode plugin @maggu2810/oclitellmac` (global: `--global` flag) or `opencode plugin <path>` (local development)
 
 ## Features
 
@@ -29,17 +29,20 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 For AGENTS.md conventions and token cost optimization:
 Read @docs/agents-file-conventions.md
 
+For documentation structure and README.md regeneration instructions:
+Read @docs/docu-handling.md
+
 When working on code or understanding import conventions and development setup:
-Read @DEVELOPMENT.md
+Read @docs/DEVELOPMENT.md
 
 When understanding OpenCode plugin CLI commands and spec formats:
 Read @docs/opencode-plugin-cli.md
 
 When understanding path management (XDG compliance, cross-platform):
-Read @PATH-STRATEGY.md
+Read @docs/PATH-STRATEGY.md
 
 When configuring server plugin endpoints or understanding configuration options:
-Read @CONFIGURATION.md
+Read @docs/CONFIGURATION.md
 
 When working on server plugin field mapping or LiteLLM API integration:
 Read @server/README.md (includes field mapping priority and LiteLLM compatibility)

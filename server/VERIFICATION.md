@@ -4,7 +4,7 @@
 
 - [x] `package.json` - Package configuration with dependencies
 - [x] `tsconfig.json` - TypeScript configuration
-- [x] `README.md` - User documentation
+- [x] `README.md` - Technical documentation (server plugin)
 - [x] `IMPLEMENTATION.md` - Implementation details and summary
 - [x] `config-example.json` - Example configuration file
 - [x] `.gitignore` - Git ignore rules

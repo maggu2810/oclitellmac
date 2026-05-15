@@ -4,8 +4,8 @@ This document provides detailed configuration options for the oclitellmac server
 
 **Quick Links:**
 - [Installation Guide](INSTALL.md) - Setup and verification steps
-- [Feature Overview](README.md) - What oclitellmac can do
-- [Example Configuration](server/config-example.json) - Complete configuration examples
+- [Feature Overview](../README.md) - What oclitellmac can do
+- [Example Configuration](../server/config-example.json) - Complete configuration examples
 
 ## Table of Contents
 
@@ -466,6 +466,6 @@ To test a new endpoint without affecting existing ones:
 ## See Also
 
 - [Installation Guide](INSTALL.md) - Setup and verification
-- [README.md](README.md) - Features and architecture
-- [server/config-example.json](server/config-example.json) - Complete configuration examples
+- [README.md](../README.md) - Features and architecture
+- [server/config-example.json](../server/config-example.json) - Complete configuration examples
 - [PATH-STRATEGY.md](PATH-STRATEGY.md) - Path management rationale
