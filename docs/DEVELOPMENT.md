@@ -4,11 +4,11 @@
 
 The plugin requires a build step to compile TypeScript source to JavaScript in `dist/`.
 
-### Compile Command
+### Build Command
 
 ```bash
 cd plugins/oclitellmac
-bun run compile
+bun run build
 ```
 
 This command:
@@ -320,9 +320,9 @@ bun run build
 
 ## Architecture
 
-- **Server Plugin**: See [server/ARCHITECTURE.md](server/ARCHITECTURE.md) for modular pipeline design
-- **TUI Plugin**: See [tui/README.md](tui/README.md) for component structure
-- **Producer-Consumer Pattern**: See [README.md](README.md#architecture) for overview
+- **Server Plugin**: See [server/ARCHITECTURE.md](../server/ARCHITECTURE.md) for modular pipeline design
+- **TUI Plugin**: See [tui/README.md](../tui/README.md) for component structure
+- **Producer-Consumer Pattern**: See [README.md](../README.md) for overview
 
 ---
 
@@ -478,5 +478,5 @@ For more detailed information, see:
 - **Configuration**: [CONFIGURATION.md](CONFIGURATION.md) - Server configuration reference
 - **Installation**: [INSTALL.md](INSTALL.md) - Setup and verification guide
 - **Path Strategy**: [PATH-STRATEGY.md](PATH-STRATEGY.md) - XDG path management rationale
-- **Server Implementation**: [server/IMPLEMENTATION.md](server/IMPLEMENTATION.md) - Implementation details
-- **Server Verification**: [server/VERIFICATION.md](server/VERIFICATION.md) - Testing guide
+- **Server Implementation**: [server/IMPLEMENTATION.md](../server/IMPLEMENTATION.md) - Implementation details
+- **Server Verification**: [server/VERIFICATION.md](../server/VERIFICATION.md) - Testing guide

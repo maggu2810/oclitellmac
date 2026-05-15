@@ -56,7 +56,7 @@ plugins/oclitellmac/tui/src/
 - Linux: Respects `XDG_STATE_HOME` environment variable (default: `~/.local/state`)
 - macOS/Windows: Uses Unix-style path (`~/.local/state`)
 
-See `../PATH-STRATEGY.md` for detailed rationale and alternative approaches considered.
+See `../docs/PATH-STRATEGY.md` for detailed rationale and alternative approaches considered.
 
 #### `index.tsx` - Plugin Entry Point
 - Exports default TUI plugin object

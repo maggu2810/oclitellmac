@@ -2,31 +2,31 @@
 
 This guide walks you through installing and verifying the oclitellmac plugin.
 
-**For features and detailed reference**, see [README.md](README.md).  
+**For features and detailed reference**, see [README.md](../README.md).  
 **For configuration details**, see [CONFIGURATION.md](CONFIGURATION.md).
 
 ## Quick Start
 
-### Method 1: GitHub URL (NOT Recommended)
+### npm Package Installation (Recommended)
 
-Install directly from GitHub:
+Install from npm registry:
 
 ```bash
 # Global installation (available in all projects)
-opencode plugin github:maggu2810/oclitellmac --global
+opencode plugin @maggu2810/oclitellmac --global
 
 # Project-local installation
-opencode plugin github:maggu2810/oclitellmac
+opencode plugin @maggu2810/oclitellmac
 ```
 
 OpenCode automatically:
-- Clones the repository
+- Downloads the package from npm
 - Installs dependencies
-- Registers both entry points
+- Registers both entry points (server + TUI)
 
 Skip to step 2 (Configure Server Plugin) below.
 
-### Method 2: Local Development
+### Local Development
 
 For development or testing local changes:
 
@@ -89,7 +89,7 @@ Create `~/.config/oclitellmac/server.json` with your LiteLLM endpoint(s):
 
 **For detailed configuration options**, see [CONFIGURATION.md](CONFIGURATION.md).
 
-**For complete examples**, see [`server/config-example.json`](server/config-example.json).
+**For complete examples**, see [`server/config-example.json`](../server/config-example.json).
 
 ### 3. Restart OpenCode
 
@@ -222,74 +222,18 @@ In OpenCode TUI sidebar, look for:
 
 ## Troubleshooting
 
-### Server Plugin Not Loading
+For common issues and solutions, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
-Check OpenCode logs for:
-- "Failed to load config" → Create config file at platform-specific path (see Platform-Specific Paths above)
-- "Failed to fetch models" → Check endpoint URL and API key
-- Connection timeouts → Increase `timeout` in config
-
-### TUI Shows "Waiting for oclitellmac-server..."
-
-Possible causes:
-- Server plugin not running → Check plugin configuration
-- No budget files created → Check server logs for errors
-- Budget files invalid → Check file format (see Verify Budget Tracking above)
-- Wrong state directory → Check platform-specific path (see Platform-Specific Paths above)
-
-### Models Not Appearing
-
-Check:
-- Server plugin loaded successfully
-- Endpoint returned models (`models` in cache file not empty)
-- Category filtering settings (non-chat models blacklisted by default)
+Quick diagnostics:
+- **Server plugin not loading** → Check config file exists and is valid JSON
+- **TUI shows "Waiting for server..."** → Verify budget files exist in state directory
+- **Models not appearing** → Check endpoint is enabled and category filtering settings
+- **Budget not updating** → Verify `/key/info` endpoint is accessible
 
 ## Development
 
 See [DEVELOPMENT.md](DEVELOPMENT.md) for:
-- **Import style conventions** (extensionless imports required)
+- Build process and dependency management
+- Import style conventions
 - Type checking instructions
-- Testing local and GitHub installs
-- Troubleshooting common issues
-
-**Quick Reference:**
-
-```bash
-# Type check
-npx tsc --noEmit
-
-# Test local install
-opencode plugin .
-
-# Test GitHub install
-opencode plugin github:maggu2810/oclitellmac
-```
-
-Note: Peer dependency warnings during type check are expected and can be ignored.
-
-## File Structure
-
-```
-plugins/oclitellmac/
-├── package.json              # Merged package with dual exports
-├── tsconfig.json             # TypeScript config for both plugins
-├── README.md                 # This file
-├── INSTALL.md                # Installation guide
-├── server/                   # Server plugin
-│   ├── src/                  # Server source code
-│   ├── README.md            # Server documentation
-│   ├── ARCHITECTURE.md      # Server architecture details
-│   └── config-example.json  # Server config example
-└── tui/                      # TUI plugin
-    ├── src/                  # TUI source code
-    └── README.md            # TUI documentation
-```
-
-## Next Steps
-
-After verifying functionality:
-1. Test with multiple LiteLLM endpoints
-2. Test category filtering (enable embedding, TTS, etc.)
-3. Test file watcher updates (modify budget files manually)
-4. Test fallback to cached data (disable endpoint)
-5. Archive old separate plugins (`oclitellmac-server`, `oclitellmac-tui`)
+- Testing procedures
