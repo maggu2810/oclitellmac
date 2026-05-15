@@ -5,12 +5,18 @@
   "type": "module",
   "exports": {
     "./server": {
-      "import": "./server/src/index.ts"
+      "import": "./dist/server.js"
     },
     "./tui": {
-      "import": "./tui/src/index.tsx"
+      "import": "./dist/tui.js"
     }
   },
+  "scripts": {
+    "build": "bun scripts/build.ts"
+  },
+  "files": [
+    "dist/"
+  ],
   "keywords": [
     "opencode",
     "plugin",
@@ -35,13 +41,31 @@
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },
-  "peerDependencies": {
-    "@opentui/core": "*",
-    "@opentui/keymap": "*",
-    "@opentui/solid": "*",
-    "solid-js": "*"
-  },
   "devDependencies": {
+    "@opentui/core": "0.2.6",
+    "@opentui/keymap": "0.2.6",
+    "@opentui/solid": "0.2.6",
+    "solid-js": "*",
     "typescript": "^5.6.0"
+  },
+  "peerDependencies": {
+    "@opentui/core": ">=0.2.6",
+    "@opentui/keymap": ">=0.2.6",
+    "@opentui/solid": ">=0.2.6",
+    "solid-js": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@opentui/core": {
+      "optional": true
+    },
+    "@opentui/keymap": {
+      "optional": true
+    },
+    "@opentui/solid": {
+      "optional": true
+    },
+    "solid-js": {
+      "optional": true
+    }
   }
 }
