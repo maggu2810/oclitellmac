@@ -23,6 +23,9 @@ Rationale for XDG Base Directory Specification usage and Unix-style paths across
 ### [DEVELOPMENT.md](DEVELOPMENT.md)
 Development guide covering build process, dependency management, import conventions, type checking, and testing procedures.
 
+### [PUBLISH.md](PUBLISH.md)
+Step-by-step guide for publishing the plugin to npm registry, including versioning, building, verification, and troubleshooting.
+
 ### Server Plugin Technical Documentation
 
 - [../server/README.md](../server/README.md) — Server plugin implementation details, field mapping, and LiteLLM API integration
