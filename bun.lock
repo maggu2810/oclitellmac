@@ -5,18 +5,30 @@
     "": {
       "name": "@maggu2810/oclitellmac",
       "dependencies": {
-        "@opencode-ai/plugin": "latest",
-        "@opencode-ai/sdk": "latest",
-        "@opentui/core": "0.2.6",
-        "@opentui/keymap": "0.2.6",
-        "@opentui/solid": "0.2.6",
+        "@opencode-ai/plugin": "^1.15.0",
+        "@opencode-ai/sdk": "^1.15.0",
         "xdg-basedir": "^5.1.0",
         "zod": "^3.23.0",
       },
       "devDependencies": {
+        "@opentui/core": "0.2.6",
+        "@opentui/keymap": "0.2.6",
+        "@opentui/solid": "0.2.6",
         "solid-js": "*",
         "typescript": "^5.6.0",
       },
+      "peerDependencies": {
+        "@opentui/core": ">=0.2.6",
+        "@opentui/keymap": ">=0.2.6",
+        "@opentui/solid": ">=0.2.6",
+        "solid-js": ">=1.0.0",
+      },
+      "optionalPeers": [
+        "@opentui/core",
+        "@opentui/keymap",
+        "@opentui/solid",
+        "solid-js",
+      ],
     },
   },
   "packages": {
@@ -98,9 +110,9 @@
 
     "@msgpackr-extract/msgpackr-extract-win32-x64": ["@msgpackr-extract/msgpackr-extract-win32-x64@3.0.3", "", { "os": "win32", "cpu": "x64" }, "sha512-x0fWaQtYp4E6sktbsdAqnehxDgEc/VwM7uLsRCYWaiGu0ykYdZPiS8zCWdnjHwyiumousxfBm4SO31eXqwEZhQ=="],
 
-    "@opencode-ai/plugin": ["@opencode-ai/plugin@1.14.48", "", { "dependencies": { "@opencode-ai/sdk": "1.14.48", "effect": "4.0.0-beta.59", "zod": "4.1.8" }, "peerDependencies": { "@opentui/core": ">=0.2.6", "@opentui/keymap": ">=0.2.6", "@opentui/solid": ">=0.2.6" }, "optionalPeers": ["@opentui/core", "@opentui/keymap", "@opentui/solid"] }, "sha512-pb2ywByzn4i35WWJquEYyb8lDC/ph1PLXT+heucJN6Y9U/oeSw98JQV93IG7M6BUBks6MKD3DGDJdQfyD6x0rA=="],
+    "@opencode-ai/plugin": ["@opencode-ai/plugin@1.15.0", "", { "dependencies": { "@opencode-ai/sdk": "1.15.0", "effect": "4.0.0-beta.65", "zod": "4.1.8" }, "peerDependencies": { "@opentui/core": ">=0.2.10", "@opentui/keymap": ">=0.2.10", "@opentui/solid": ">=0.2.10" }, "optionalPeers": ["@opentui/core", "@opentui/keymap", "@opentui/solid"] }, "sha512-97N985FDqNMpbBbsNotu0j3lkHwDyHX+2BnPFfnuNmBrTQNqLrn2UyA6wBfP6J5l4xUslwKNrH2IVrGIZeiSxQ=="],
 
-    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.14.48", "", { "dependencies": { "cross-spawn": "7.0.6" } }, "sha512-wKM86jCzV/ZApyWrdm3uP8XdWcS0LMbu3FV+OWz1ChiGGg1wiIWNGMJs5CY8/QX2/rUuZrd1Q1DqvdamZ0zLeg=="],
+    "@opencode-ai/sdk": ["@opencode-ai/sdk@1.15.0", "", { "dependencies": { "cross-spawn": "7.0.6" } }, "sha512-npmURKwd1HoV/i3CsGl2tdHpGhWSGVqTN1cp0s2gDH5gE6XduAtFmmVXBZ/ovJLh3Evu6sTVZ9n0IkJzFNeveQ=="],
 
     "@opentui/core": ["@opentui/core@0.2.6", "", { "dependencies": { "bun-ffi-structs": "0.2.2", "diff": "9.0.0", "marked": "17.0.1", "string-width": "7.2.0", "strip-ansi": "7.1.2", "yoga-layout": "3.2.1" }, "optionalDependencies": { "@opentui/core-darwin-arm64": "0.2.6", "@opentui/core-darwin-x64": "0.2.6", "@opentui/core-linux-arm64": "0.2.6", "@opentui/core-linux-x64": "0.2.6", "@opentui/core-win32-arm64": "0.2.6", "@opentui/core-win32-x64": "0.2.6" }, "peerDependencies": { "web-tree-sitter": "0.25.10" } }, "sha512-dBpMaWVM7wtW2/2TlGPrkPjg6gOL3MVU/5XXk+U1LDJB8L4q4NeYWVdzfAVNcEvgmuuCy/cVqdY2D4ei+e7MMg=="],
 
@@ -154,7 +166,7 @@
 
     "diff": ["diff@9.0.0", "", {}, "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="],
 
-    "effect": ["effect@4.0.0-beta.59", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "fast-check": "^4.6.0", "find-my-way-ts": "^0.1.6", "ini": "^6.0.0", "kubernetes-types": "^1.30.0", "msgpackr": "^1.11.9", "multipasta": "^0.2.7", "toml": "^4.1.1", "uuid": "^13.0.0", "yaml": "^2.8.3" } }, "sha512-xyUDLeHSe8d6lWGOvR6Fgn2HL6gYeTZ/S4Jzk9uc4ZUxMPPsNZlNXrvk0C7/utQFzeX7uAWcVnG2BjbA0SRoAA=="],
+    "effect": ["effect@4.0.0-beta.65", "", { "dependencies": { "@standard-schema/spec": "^1.1.0", "fast-check": "^4.6.0", "find-my-way-ts": "^0.1.6", "ini": "^6.0.0", "kubernetes-types": "^1.30.0", "msgpackr": "^1.11.9", "multipasta": "^0.2.7", "toml": "^4.1.1", "uuid": "^13.0.0", "yaml": "^2.8.3" } }, "sha512-QYKvQPAj3CmtsvWkHQww15wX4KG2gNsszDWEcOO5sZCMknp66u6Si/Opmt3wwWCwsyvRmDAdIg+JIz5qzbbFIw=="],
 
     "electron-to-chromium": ["electron-to-chromium@1.5.354", "", {}, "sha512-JaBHwWcfIdmSAfWM5l3uwjGd431j8YEMikZ+K/2nXVuBqJKyZ0f+2h4n4JY5AyNiZmnY9qQr2RU3v9DxDmHMNg=="],
 

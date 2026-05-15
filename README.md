@@ -70,10 +70,10 @@ Install the plugin from npm:
 
 ```bash
 # Global installation (available in all projects)
-opencode plugin @maggu2810/oclitellmac --global
+opencode plugin oclitellmac --global
 
 # Project-local installation
-opencode plugin @maggu2810/oclitellmac
+opencode plugin oclitellmac
 ```
 
 After installation, configure the server plugin (see Configuration section below) and restart OpenCode.

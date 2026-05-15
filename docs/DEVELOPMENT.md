@@ -385,7 +385,7 @@ The `"files": ["dist/"]` field in `package.json` ensures only `dist/` and `packa
 Users can now install:
 
 ```bash
-opencode plugin @maggu2810/oclitellmac
+opencode plugin oclitellmac
 ```
 
 ---

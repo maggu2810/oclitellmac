@@ -12,7 +12,7 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 
 - **Config**: `~/.config/oclitellmac/server.json` (XDG-compliant, see docs/PATH-STRATEGY.md)
 - **State**: `~/.local/state/oclitellmac/` (providers cache, budget data)
-- **Installation**: `opencode plugin @maggu2810/oclitellmac` (global: `--global` flag) or `opencode plugin <path>` (local development)
+- **Installation**: `opencode plugin oclitellmac` (global: `--global` flag) or `opencode plugin <path>` (local development)
 
 ## Features
 
