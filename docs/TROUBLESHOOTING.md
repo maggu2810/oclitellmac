@@ -61,7 +61,7 @@ This guide covers common issues when using the oclitellmac plugin.
 
 5. **Verify plugin is registered in OpenCode config**:
    - Check `.opencode/opencode.json` contains plugin entry
-   - For npm install: `opencode plugin list` should show `@maggu2810/oclitellmac`
+   - For npm install: `opencode plugin list` should show `oclitellmac`
 
 ---
 

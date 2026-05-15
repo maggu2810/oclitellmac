@@ -13,10 +13,10 @@ Install from npm registry:
 
 ```bash
 # Global installation (available in all projects)
-opencode plugin @maggu2810/oclitellmac --global
+opencode plugin oclitellmac --global
 
 # Project-local installation
-opencode plugin @maggu2810/oclitellmac
+opencode plugin oclitellmac
 ```
 
 OpenCode automatically:

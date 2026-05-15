@@ -61,7 +61,7 @@ When significant features are added or configuration changes, the root `README.m
    - **Source**: Current root `README.md` Requirements section (lines 244–248)
 
 6. **Installation**
-   - **Only npm install**: `opencode plugin @maggu2810/oclitellmac`
+   - **Only npm install**: `opencode plugin oclitellmac`
    - Mention `--global` flag for global installation
    - **Exclude**: GitHub install (blocked by OpenCode bug), local development (belongs in `docs/DEVELOPMENT.md`)
    - **Source**: New content, not from existing files
