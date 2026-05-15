@@ -10,9 +10,9 @@
  *   - Transform to OpenCode API format (this module)
  */
 
-import type { ModelHubEntry, ModelInfoEntry } from "./fetch.js";
-import { buildModelEntry } from "./build.js";
-import { categorizeModel, type Category } from "./categorize.js";
+import type { ModelHubEntry, ModelInfoEntry } from "./fetch";
+import { buildModelEntry } from "./build";
+import { categorizeModel, type Category } from "./categorize";
 
 /**
  * Build models map and categories from LiteLLM endpoints.
