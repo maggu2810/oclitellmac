@@ -39,21 +39,34 @@ cd oclitellmac
 npm install
 
 # Register with OpenCode
-opencode plugin add .
+opencode plugin .
 ```
 
 ### 1. Configure OpenCode (Local Path Only)
 
-**Note**: GitHub URL installation adds these automatically.
+**Note**: `opencode plugin .` does this automatically. Manual editing is only needed as a fallback.
 
-Edit your `~/.config/opencode/opencode.json` (or project-local `opencode.json`):
+For **local config**, edit `.opencode/opencode.json` (or `.opencode/opencode.jsonc`) and `.opencode/tui.json` (or `.opencode/tui.jsonc`) separately:
+
+`.opencode/opencode.json`:
+```json
+{
+  "plugin": ["./oclitellmac"]
+}
+```
+
+`.opencode/tui.json`:
+```json
+{
+  "plugin": ["./oclitellmac"]
+}
+```
+
+For **global config**, use absolute paths in `~/.config/opencode/opencode.json` (or `.jsonc`) and `~/.config/opencode/tui.json` (or `.jsonc`):
 
 ```json
 {
-  "plugin": [
-    "oclitellmac/server",
-    "oclitellmac/tui"
-  ]
+  "plugin": ["/absolute/path/to/oclitellmac"]
 }
 ```
 
@@ -233,21 +246,26 @@ Check:
 
 ## Development
 
-### Type Check
+See [DEVELOPMENT.md](DEVELOPMENT.md) for:
+- **Import style conventions** (extensionless imports required)
+- Type checking instructions
+- Testing local and GitHub installs
+- Troubleshooting common issues
+
+**Quick Reference:**
 
 ```bash
-cd plugins/oclitellmac
+# Type check
 npx tsc --noEmit
+
+# Test local install
+opencode plugin .
+
+# Test GitHub install
+opencode plugin github:maggu2810/oclitellmac
 ```
 
-Note: Errors about missing Node.js types and peer dependencies are expected.
-
-### Update Sources
-
-When modifying sources:
-1. Edit files in `server/src/` or `tui/src/`
-2. Run type check
-3. Reload OpenCode to test changes
+Note: Peer dependency warnings during type check are expected and can be ignored.
 
 ## File Structure
 

@@ -12,7 +12,7 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 
 - **Config**: `~/.config/oclitellmac/server.json` (XDG-compliant, see PATH-STRATEGY.md)
 - **State**: `~/.local/state/oclitellmac/` (providers cache, budget data)
-- **Installation**: `opencode plugin github:maggu2810/oclitellmac` or `opencode plugin add <path>`
+- **Installation**: `opencode plugin github:maggu2810/oclitellmac` or `opencode plugin <path>`
 
 ## Features
 
@@ -28,6 +28,12 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 
 For AGENTS.md conventions and token cost optimization:
 Read @docs/agents-file-conventions.md
+
+When working on code or understanding import conventions and development setup:
+Read @DEVELOPMENT.md
+
+When understanding OpenCode plugin CLI commands and spec formats:
+Read @docs/opencode-plugin-cli.md
 
 When understanding path management (XDG compliance, cross-platform):
 Read @PATH-STRATEGY.md
