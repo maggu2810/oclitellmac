@@ -30,6 +30,7 @@ The TUI plugin displays budget and usage information from LiteLLM proxies in the
 plugins/oclitellmac/tui/src/
 ├── index.tsx              # Plugin entry point, TUI registration
 ├── paths.ts               # Path management (xdg-basedir wrapper)
+├── log.ts                 # File-based logger (independent debugging)
 ├── types.ts               # TypeScript type definitions
 ├── loader.ts              # File reading & parsing logic
 ├── watcher.ts             # File watching (fs.watch + polling fallback)
@@ -51,24 +52,33 @@ plugins/oclitellmac/tui/src/
 **Exported Functions**:
 - `getBudgetDataDir()`: Returns `~/.local/state/oclitellmac/key-info`
 - `getStateDir()`: Base directory getter with validation
+- `getLogDir()`: Returns `~/.local/state/oclitellmac/log` for debug logs
 
 **Platform Behavior**:
 - Linux: Respects `XDG_STATE_HOME` environment variable (default: `~/.local/state`)
 - macOS/Windows: Uses Unix-style path (`~/.local/state`)
 
-See `../docs/PATH-STRATEGY.md` for detailed rationale and alternative approaches considered.
+See [PATH-STRATEGY.md](../docs/PATH-STRATEGY.md) for detailed rationale and alternative approaches considered.
 
 #### `index.tsx` - Plugin Entry Point
-- Exports default TUI plugin object
+- Exports default TUI plugin object (implements `TuiPluginModule`)
 - Registers "Key Info" panel with OpenCode sidebar
 - Creates file watcher for budget directory
 - Loads initial budget data on startup
-- Provides logging helper using `api.client.app.log()`
+- Instantiates a file-based logger to write independent debug logs
 
-**Key Functions**:
-- `createPlugin()`: Returns TUI plugin configuration
-- `log()`: Wrapper for OpenCode logging (v2 SDK flat params)
-- Signal management for reactive updates
+**Key Responsibilities**:
+- Initializes `Logger` from `log.ts` using log path from `paths.ts`
+- Initializes `BudgetLoader` and `BudgetWatcher`, passing the logger instance
+- Manages reactive state (`budgetData`, `loadStatus`) with Solid.js signals
+- Registers sidebar slot for `KeyInfoPanel`
+- Handles cleanup and logger disposal on plugin dispose
+
+#### `log.ts` - File-Based Logger
+- Independent logger class shared between TUI and server modules
+- Writes logs to `<logBaseDirectory>/<id>/YYYY-MM-DD-HH-mm-ss.log`
+- Rotates log files every 500 calls by default to prevent large files
+- Falls back to `console.error` on write failures or if filesystem is read-only
 
 #### `types.ts` - Type Definitions
 
@@ -396,13 +406,18 @@ const pollInterval = setInterval(() => {
 
 ```typescript
 try {
-  const data = JSON.parse(content)
-  if (!data.keyInfo?.info) {
-    throw new Error("Missing keyInfo.info structure")
+  const content = await readFile(filePath, 'utf-8')
+  const data = JSON.parse(content) as KeyInfoFile
+  if (
+    !data.keyInfo?.info ||
+    typeof data.keyInfo.info.spend !== 'number' ||
+    typeof data.keyInfo.info.max_budget !== 'number'
+  ) {
+    this.logger.log('error', `Invalid budget data for ${data.providerKey}: missing or invalid keyInfo.info fields`)
+    return null
   }
-  return parseKeyInfoFile(data, filePath)
+  // Transform and return
 } catch (error) {
-  log("warn", `Failed to parse ${filePath}: ${error.message}`)
   return null // Skip this file
 }
 ```
@@ -410,9 +425,12 @@ try {
 ### Missing Directory
 
 ```typescript
-if (!fs.existsSync(directory)) {
-  log("info", "Key info directory does not exist, waiting for server...")
-  return [] // Empty array, show "Waiting for server" state
+try {
+  const files = await readdir(this.budgetDataDir)
+  // ...
+} catch (error) {
+  // Directory doesn't exist yet or is inaccessible
+  this.logger.log('info', 'Budget directory not found - waiting for server plugin')
 }
 ```
 
@@ -420,10 +438,12 @@ if (!fs.existsSync(directory)) {
 
 ```typescript
 try {
-  const watcher = fs.watch(directory, onChange)
+  this.watcher = watch(keyInfoDir, { recursive: false }, (eventType, filename) => {
+    // ...
+  })
 } catch (error) {
-  log("warn", "File watch failed, falling back to polling")
-  const pollInterval = setInterval(onChange, 5000)
+  this.logger.log('warn', `watcher.start: fs.watch failed, starting polling fallback: ${error}`)
+  this.startPolling()
 }
 ```
 
@@ -486,5 +506,5 @@ new Intl.DateTimeFormat(undefined, {
 
 ## Related Documentation
 
-- **User Guide**: See `../README.md` for installation and configuration
-- **Server Plugin**: See `../server/README.md` for budget file format and generation
+- **User Guide**: See [README.md](../README.md) for installation and configuration
+- **Server Plugin**: See [server/README.md](../server/README.md) for budget file format and generation
