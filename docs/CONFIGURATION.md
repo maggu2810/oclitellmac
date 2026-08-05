@@ -180,6 +180,44 @@ Set to `true` to enable all model categories (chat, embedding, TTS, image genera
 
 Default: `false` (only chat models enabled)
 
+#### `providerOptions` (optional)
+
+Forwarded verbatim into the injected provider's `options` block, alongside
+`baseURL` and `apiKey`. See OpenCode's provider config schema
+(`packages/core/src/v1/config/provider.ts` — see
+[docs/litellm-integration/source-map.md](../../../docs/litellm-integration/source-map.md)
+for the exact commit) for full field semantics.
+
+```json
+"providerOptions": {
+  "timeout": 600000,
+  "chunkTimeout": 30000,
+  "headerTimeout": 10000,
+  "setCacheKey": true
+}
+```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timeout` | number \| `false` | Request timeout in milliseconds. `false` disables it. |
+| `chunkTimeout` | number | Timeout in milliseconds between streamed SSE chunks. |
+| `headerTimeout` | number \| `false` | Timeout in milliseconds to wait for response headers. `false` disables it. |
+| `setCacheKey` | boolean | Ensure a cache key is always set for this provider. |
+
+All fields are optional and omitted from the generated provider config when
+not set.
+
+#### `env` (optional)
+
+Env var names OpenCode checks for the API key. This is a top-level provider
+field (sibling of `options`), not nested inside `providerOptions`. Since the
+plugin already injects `apiKey` directly, this is rarely needed — mainly
+useful as a fallback for tooling that reads env vars directly.
+
+```json
+"env": ["LITELLM_API_KEY"]
+```
+
 ## Global Options Reference
 
 The optional `options` object configures global plugin behavior:

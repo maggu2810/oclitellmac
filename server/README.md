@@ -206,7 +206,7 @@ hubEntries + infoMap
      npm: "@ai-sdk/openai-compatible",
      name: providerName,
      key: apiKey,
-     options: { baseURL, apiKey, litellmProxy: true },
+     options: { baseURL, apiKey, ...providerOptions },
      blacklist: [...],
      models: { ... }
    }
@@ -267,7 +267,8 @@ The plugin injects this structure into `config.provider[providerKey]`:
   options: {
     baseURL: "https://gateway.com/v1",   // API endpoint
     apiKey: "sk-...",                    // Bearer token
-    litellmProxy: true                   // Enable _noop tool injection
+    // Optional, from server.json endpoint.providerOptions:
+    // timeout, chunkTimeout, headerTimeout, setCacheKey
   },
   blacklist: [                           // Hide non-chat models
     "text-embedding-ada-002",
@@ -279,15 +280,6 @@ The plugin injects this structure into `config.provider[providerKey]`:
   }
 }
 ```
-
-### Why `litellmProxy: true`?
-
-Enables automatic `_noop` tool injection when:
-- Message history contains tool calls
-- No active tools for current request
-- Satisfies LiteLLM/Anthropic validation requirements
-
-See: OpenCode PR #8658, `packages/opencode/src/session/llm.ts` L152-162
 
 ## Category Filtering Logic
 
@@ -375,38 +367,21 @@ LiteLLM uses different field names:
 
 Both map to OpenCode's `cost.context_over_200k` structure.
 
-### LiteLLM Compatibility: The `litellmProxy` Option
+### LiteLLM Compatibility: No `litellmProxy` Workaround Needed
 
-**What it does**: Enables automatic `_noop` tool injection for LiteLLM proxy compatibility.
+Earlier versions of `oclitellmac` set an `options.litellmProxy: true` flag on
+every injected provider to work around an Anthropic tool-call validation
+error some LiteLLM proxy versions raised (a stub `_noop` tool injection).
 
-**Why it's needed**: When using Anthropic models (Claude) through LiteLLM, requests with tool call history but no active tools will fail with:
-```
-Anthropic doesn't support tool calling without tools= param specified
-```
+`oclitellmac` targets OpenCode ≥ v1.18.13, where this workaround was removed
+from OpenCode itself — the validation issue was fixed natively in LiteLLM.
+The plugin no longer sets `litellmProxy`, and it has no effect even if set
+manually.
 
-This occurs when previous messages contained tool calls (e.g., `bash`, `read`, `edit`) but the current request doesn't need any tools.
-
-**How oclitellmac handles it**: The plugin automatically sets `options.litellmProxy: true` in all provider configurations, which tells OpenCode to inject a dummy `_noop` tool when:
-- Message history contains tool calls (`tool-call` or `tool-result` content parts)
-- Current request has no active tools defined
-
-**The `_noop` tool**:
-- Satisfies LiteLLM's validation requirement
-- Never actually called (empty schema, generic description)
-- Automatically filtered from UI (`activeTools` list)
-- Zero functional impact (pure validation workaround)
-
-**When it activates**:
-- Automatically detected if provider ID contains "litellm"
-- Or explicitly set via `options.litellmProxy: true` (what oclitellmac does)
-
-**Configuration**:
-oclitellmac sets this automatically for all endpoints. No user configuration needed.
-
-**Reference**: 
-- OpenCode PR [#8658](https://github.com/anomalyco/opencode/pull/8658) - Added explicit `litellmProxy` option
-- OpenCode issues [#8246](https://github.com/anomalyco/opencode/issues/8246), [#2915](https://github.com/anomalyco/opencode/issues/2915)
-- Implementation: `packages/opencode/src/session/llm.ts` (lines 142-162)
+**Requirement**: run **LiteLLM ≥ v1.85.0-rc.2** for correct tool-call-history
+behavior with Anthropic models. See
+[docs/litellm-integration/field-coverage-comparison.md §1a](../../../docs/litellm-integration/field-coverage-comparison.md)
+for background and the removal commit reference.
 
 ## Performance Considerations
 

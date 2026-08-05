@@ -5,6 +5,19 @@
 type AnyRecord = Record<string, any>;
 
 /**
+ * LiteLLM reports `input_cost_per_token` / `output_cost_per_token` (and the
+ * cache / extended-context variants) in USD per single token. OpenCode's
+ * `cost.input` / `cost.output` ModelConfig fields are USD per **million**
+ * tokens — `packages/opencode/src/session/session.ts` divides token counts
+ * by this same constant before multiplying by the cost fields. Without this
+ * conversion, every displayed/tracked cost would be 1,000,000x too low.
+ *
+ * See docs/litellm-integration/field-coverage-comparison.md §2a
+ * ("Cost unit conversion") for the full rationale.
+ */
+const USD_PER_TOKEN_TO_PER_MILLION = 1_000_000;
+
+/**
  * Return the first non-null/undefined value from (dict, key) pairs.
  */
 function getFirst(...sources: Array<[AnyRecord, string]>): any {
@@ -118,8 +131,8 @@ export function mapCost(hub: AnyRecord, info: AnyRecord): AnyRecord | null {
 	}
 
 	const cost: AnyRecord = {
-		input: inputCost,
-		output: outputCost,
+		input: inputCost * USD_PER_TOKEN_TO_PER_MILLION,
+		output: outputCost * USD_PER_TOKEN_TO_PER_MILLION,
 	};
 
 	// Optional cache costs — only available from /v1/model/info.
@@ -132,10 +145,10 @@ export function mapCost(hub: AnyRecord, info: AnyRecord): AnyRecord | null {
 		[hub, "cache_creation_input_token_cost"],
 	);
 	if (cacheRead !== null) {
-		cost.cache_read = cacheRead;
+		cost.cache_read = cacheRead * USD_PER_TOKEN_TO_PER_MILLION;
 	}
 	if (cacheWrite !== null) {
-		cost.cache_write = cacheWrite;
+		cost.cache_write = cacheWrite * USD_PER_TOKEN_TO_PER_MILLION;
 	}
 
 	// Extended context cost tier.
@@ -153,12 +166,32 @@ export function mapCost(hub: AnyRecord, info: AnyRecord): AnyRecord | null {
 	);
 	if (inputOver !== null && outputOver !== null) {
 		cost.context_over_200k = {
-			input: inputOver,
-			output: outputOver,
+			input: inputOver * USD_PER_TOKEN_TO_PER_MILLION,
+			output: outputOver * USD_PER_TOKEN_TO_PER_MILLION,
 		};
 	}
 
 	return cost;
+}
+
+/**
+ * Build the OpenCode `variants` map from LiteLLM's reasoning-effort support
+ * flags (see `fetch.ts` for how `supports_reasoning_efforts` is derived from
+ * `/v1/model/info`'s `supports_<level>_reasoning_effort` boolean fields).
+ *
+ * Returns `undefined` (rather than an empty object) when no levels are
+ * reported, so callers can omit the `variants` key entirely.
+ */
+export function mapVariants(
+	info: AnyRecord,
+): Record<string, { reasoningEffort: string }> | undefined {
+	const efforts: string[] | undefined = info.supports_reasoning_efforts;
+	if (!efforts || efforts.length === 0) {
+		return undefined;
+	}
+	return Object.fromEntries(
+		efforts.map((effort) => [effort, { reasoningEffort: effort }]),
+	);
 }
 
 /**

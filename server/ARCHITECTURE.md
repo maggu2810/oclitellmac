@@ -142,7 +142,7 @@ plugins/oclitellmac/server/src/
      npm: "@ai-sdk/openai-compatible",
      name: providerName,
      key: apiKey,
-     options: { baseURL, apiKey, litellmProxy: true },
+     options: { baseURL, apiKey, ...providerOptions },
      blacklist: [...],
      models: { ... }
    }
@@ -294,7 +294,8 @@ The plugin injects this structure into `config.provider[providerKey]`:
   options: {
     baseURL: "https://gateway.com/v1",   // API endpoint
     apiKey: "sk-...",                    // Bearer token
-    litellmProxy: true                   // Enable _noop tool injection
+    // Optional, from server.json endpoint.providerOptions:
+    // timeout, chunkTimeout, headerTimeout, setCacheKey
   },
   blacklist: [                           // Hide non-chat models
     "text-embedding-ada-002",
@@ -307,14 +308,9 @@ The plugin injects this structure into `config.provider[providerKey]`:
 }
 ```
 
-### Why `litellmProxy: true`?
-
-Enables automatic `_noop` tool injection when:
-- Message history contains tool calls
-- No active tools for current request
-- Satisfies LiteLLM/Anthropic validation requirements
-
-See: OpenCode PR #8658, `packages/opencode/src/session/llm.ts` L152-162
+No `litellmProxy` option is set — see
+[server/README.md § LiteLLM Compatibility](README.md#litellm-compatibility-no-litellmproxy-workaround-needed)
+for why it was removed.
 
 ---
 

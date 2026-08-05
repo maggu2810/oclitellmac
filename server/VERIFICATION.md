@@ -118,6 +118,21 @@
 - [ ] Check budget file is updated again
 - [ ] Verify `fetchedAt` timestamp updates
 
+### Cost & Variants Tests
+
+- [ ] Pick a model with known LiteLLM pricing (e.g. `claude-sonnet-4-5` at
+      `input_cost_per_token: 0.000003`, `output_cost_per_token: 0.000015`)
+- [ ] Check the injected `models.<id>.cost` block shows **USD per million
+      tokens** (`{"input": 3, "output": 15}`), not the raw per-token value
+      (`{"input": 0.000003, "output": 0.000015}`) — see
+      [docs/litellm-integration/field-coverage-comparison.md §2a](../../../docs/litellm-integration/field-coverage-comparison.md)
+      for the conversion rationale
+- [ ] Run a real chat completion and confirm `/cost` in OpenCode matches
+      LiteLLM's own `x-litellm-response-cost` header (within rounding)
+- [ ] Pick a model with `supports_<level>_reasoning_effort` flags in
+      `/v1/model/info` and confirm `models.<id>.variants` lists each
+      supported level as `{ "<level>": { "reasoningEffort": "<level>" } }`
+
 ### Error Handling Tests
 - [ ] Invalid JSON in config file - check error message
 - [ ] Missing config file - check graceful handling
