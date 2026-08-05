@@ -40,7 +40,7 @@ for the architecture shared with `tools/config-generator`.
 
 ```bash
 cd /path/to/plugins/oclitellmac
-npm install
+bun install
 ```
 
 ### 2. Create Configuration File
@@ -312,7 +312,7 @@ Full reference: [CONFIGURATION.md](../docs/CONFIGURATION.md)
 ## 🎯 Next Steps
 
 ### Immediate
-1. ✅ Install dependencies: `npm install`
+1. ✅ Install dependencies: `bun install`
 2. ✅ Create configuration: `~/.config/oclitellmac/server.json`
 3. ✅ Add plugin to OpenCode
 4. ✅ Restart OpenCode

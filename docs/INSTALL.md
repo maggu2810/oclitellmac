@@ -36,7 +36,7 @@ git clone https://github.com/maggu2810/oclitellmac.git
 cd oclitellmac
 
 # Install dependencies
-npm install
+bun install
 
 # Register with OpenCode
 opencode plugin .

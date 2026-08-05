@@ -33,20 +33,20 @@ The build produces:
 - `dist/tui.js` — bundled TUI plugin with pre-transformed JSX
 These files are gitignored and built on-demand for local testing or npm publish.
 
-### Files Field for npm Publish
-The `package.json` includes a `"files": ["dist/"]` field. This controls what gets packaged when publishing to npm:
+### Files Field for Publishing
+The `package.json` includes a `"files": ["dist/"]` field. This controls what gets packaged when publishing (via `bun publish` or `npm publish` — both respect this field identically):
 
 **Why it's needed:**
 
-- When publishing via `npm publish`, npm packs the repo into a tarball
-- Without the `files` field, npm reads `.gitignore` and excludes `dist/` from the pack
+- When publishing, the tool packs the repo into a tarball
+- Without the `files` field, the packer reads `.gitignore` and excludes `dist/` from the pack
 - The `files` field explicitly lists what to include, overriding `.gitignore`
 **IMPORTANT:** Do not remove the `files` field or add additional patterns unless intentional.
 
-### Script Naming for npm Publish
+### Script Naming for Publishing
 The script is named `"build"`, which is the conventional name used by most npm packages (see `opencode-forge`, `opencode` itself, and npm ecosystem conventions).
 
-**Note on git-based installs (future work):** If GitHub install support is added in the future (currently blocked by an OpenCode bug with `:` in cache paths — see `docs/package-management.md` §9.6.2 and `tests/bun-colon-repro/`), be aware that pacote checks for certain script names (`prepare`, `prepack`, `install`, etc.) during git fetch and may attempt to run `npm install`. The `build` script does not trigger this behavior and is safe for both npm publish and potential future git installs.
+**Note on git-based installs (future work):** If GitHub install support is added in the future (currently blocked by an OpenCode bug with `:` in cache paths — see `docs/package-management.md` §9.6.2 and `tests/bun-colon-repro/`), be aware that pacote checks for certain script names (`prepare`, `prepack`, `install`, etc.) during git fetch and may attempt to run `npm install`. The `build` script does not trigger this behavior and is safe for both npm/bun publish and potential future git installs.
 
 ---
 
@@ -338,44 +338,10 @@ opencode plugin github:maggu2810/oclitellmac
 
 ---
 
-## npm Publish Workflow
+## Publishing to npm
 
-Prerequisite:
-- bump version in `package.json`
-- commit
-- create tag
-- push tag
-
-To publish to npm registry:
-
-### 1. Build the Plugin
-
-```bash
-cd plugins/oclitellmac
-bun run build
-
-```
-Verify `dist/server.js` and `dist/tui.js` exist and are up-to-date.
-
-### 2. Publish to npm
-
-```bash
-npm publish
-# or
-bun publish
-```
-
-The `"files": ["dist/"]` field in `package.json` ensures only `dist/` and `package.json` are included in the published tarball.
-
-If this fails because of authentication, try `npm login`
-
-### 3. Install via npm
-
-Users can now install:
-
-```bash
-opencode plugin oclitellmac
-```
+See [PUBLISH.md](PUBLISH.md) for the full build-verify-publish workflow,
+version bumping, and troubleshooting.
 
 ---
 
