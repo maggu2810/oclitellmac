@@ -15,6 +15,23 @@ const CategorySchema = z.enum([
   "router",
 ])
 
+// Additional OpenCode provider `options.*` fields forwarded verbatim into
+// the injected provider's `options` block, alongside `baseURL` / `apiKey`.
+// See OpenCode's ProviderConfig schema
+// (packages/core/src/v1/config/provider.ts) and
+// docs/litellm-integration/field-coverage-comparison.md §1 for field
+// semantics.
+const ProviderOptionsSchema = z.object({
+  // Milliseconds. `false` disables the timeout entirely.
+  timeout: z.union([z.number(), z.literal(false)]).optional(),
+  // Milliseconds between streamed SSE chunks before aborting.
+  chunkTimeout: z.number().optional(),
+  // Milliseconds to wait for response headers. `false` disables it.
+  headerTimeout: z.union([z.number(), z.literal(false)]).optional(),
+  // Ensure a cache key is always set for this provider.
+  setCacheKey: z.boolean().optional(),
+})
+
 // Endpoint configuration schema
 export const EndpointConfigSchema = z.object({
   baseUrl: z.string(),
@@ -24,6 +41,12 @@ export const EndpointConfigSchema = z.object({
   enabled: z.boolean().optional().default(true),
   enabledCategories: z.array(CategorySchema).optional(),
   enableAllCategories: z.boolean().optional().default(false),
+  providerOptions: ProviderOptionsSchema.optional(),
+  // Env var names OpenCode checks for the API key. This is a top-level
+  // provider field (sibling to `options`), not nested inside it. This
+  // plugin already injects apiKey directly, so this is rarely needed —
+  // useful mainly as a fallback for tooling that reads env vars directly.
+  env: z.array(z.string()).optional(),
 })
 
 // Server configuration schema

@@ -3,7 +3,7 @@
  */
 
 import type { Category } from "./categorize";
-import { mapCost, mapFlags, mapLimit, mapModalities } from "./map";
+import { mapCost, mapFlags, mapLimit, mapModalities, mapVariants } from "./map";
 
 type AnyRecord = Record<string, any>;
 
@@ -23,6 +23,13 @@ export function buildModelEntry(
 		id: modelId,
 		name: modelId,
 	};
+
+	// All models discovered from a live LiteLLM proxy are known-good/active;
+	// valid since opencode widened ModelConfig.status to include "active"
+	// (see docs/litellm-integration/field-coverage-comparison.md §2a).
+	if (category === "chat") {
+		model.status = "active";
+	}
 
 	// Flat capability flags (all optional; omit when False to keep config clean).
 	const flags = mapFlags(hub, info);
@@ -45,6 +52,12 @@ export function buildModelEntry(
 	const limit = mapLimit(hub, info);
 	if (limit !== null) {
 		model.limit = limit;
+	}
+
+	// Reasoning-effort variants (omit entirely if LiteLLM reports none).
+	const variants = mapVariants(info);
+	if (variants !== undefined) {
+		model.variants = variants;
 	}
 
 	return model;

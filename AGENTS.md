@@ -22,9 +22,12 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 - Category filtering (non-chat models blacklisted by default)
 - Real-time budget display in sidebar
 - Cross-platform XDG path support (Linux/macOS/Windows)
-- LiteLLM compatibility workaround (automatic `_noop` tool injection)
+- Reasoning-effort variants surfaced from LiteLLM's `/v1/model/info`
+- Optional provider-level options (timeout, chunkTimeout, headerTimeout, setCacheKey)
 
 ## File Reading Instructions
+
+When checking which commit/tag of opencode or the reference LiteLLM plugins (BlakeHastings, yuseferi) this plugin was last verified against, [read here](../../docs/litellm-integration/source-map.md)
 
 For AGENTS.md conventions and token cost optimization:
 Read @docs/agents-file-conventions.md

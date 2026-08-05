@@ -24,6 +24,7 @@ export interface ModelHubEntry {
 export interface ModelInfoEntry {
   key?: string
   model_name?: string
+  litellm_params?: Record<string, unknown>
   model_info?: {
     supports_function_calling?: boolean
     supports_vision?: boolean
@@ -31,6 +32,13 @@ export interface ModelInfoEntry {
     supports_audio_input?: boolean
     supports_pdf_input?: boolean
     supports_audio_output?: boolean
+    /**
+     * Reasoning-effort levels this model accepts (e.g. `["low", "medium",
+     * "high"]`). Not a native LiteLLM field — derived by scanning
+     * `supports_<level>_reasoning_effort` boolean flags on this object and
+     * on the sibling `litellm_params` object. See `fetchModelInfo()`.
+     */
+    supports_reasoning_efforts?: string[]
     input_cost_per_token?: number
     output_cost_per_token?: number
     max_input_tokens?: number
@@ -40,6 +48,29 @@ export interface ModelInfoEntry {
     input_cost_per_token_above_128k_tokens?: number
     output_cost_per_token_above_128k_tokens?: number
   }
+}
+
+/** Matches LiteLLM flags like `supports_low_reasoning_effort` -> `"low"`. */
+const REASONING_EFFORT_FLAG = /^supports_([a-z]+)_reasoning_effort$/
+
+/**
+ * Derive the set of reasoning-effort levels a model supports by scanning
+ * `supports_<level>_reasoning_effort` boolean flags across `model_info` and
+ * `litellm_params`. LiteLLM does not report this as a single list field —
+ * each level is its own boolean flag.
+ */
+function extractReasoningEfforts(...sources: Array<Record<string, unknown> | undefined>): string[] {
+  const efforts = new Set<string>()
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue
+    for (const [key, value] of Object.entries(source)) {
+      const match = key.match(REASONING_EFFORT_FLAG)
+      if (match && value === true) {
+        efforts.add(match[1])
+      }
+    }
+  }
+  return [...efforts]
 }
 
 export interface KeyInfoResponse {
@@ -110,9 +141,13 @@ export class LiteLLMClient {
       
       for (const item of data.data || []) {
         const key = item.key || item.model_name
-        if (key) {
-          result[key] = item.model_info || {}
+        if (!key) continue
+        const info = { ...(item.model_info || {}) }
+        const efforts = extractReasoningEfforts(info, item.litellm_params)
+        if (efforts.length > 0) {
+          info.supports_reasoning_efforts = efforts
         }
+        result[key] = info
       }
       
       return result

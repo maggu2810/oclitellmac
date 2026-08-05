@@ -166,9 +166,16 @@ export default async function plugin(input: PluginInput): Promise<Hooks> {
           options: {
             baseURL: `${endpoint.baseUrl.replace(/\/v1\/?$/, "").replace(/\/$/, "")}/v1`,
             apiKey: endpoint.apiKey,
-            litellmProxy: true,
+            // Optional per-endpoint provider options (timeout, chunkTimeout,
+            // headerTimeout, setCacheKey) — see config.ts.
+            ...endpoint.providerOptions,
           },
           models,
+        }
+
+        // Optional top-level `env` field (sibling of `options`, not nested).
+        if (endpoint.env && endpoint.env.length > 0) {
+          providerConfig.env = endpoint.env
         }
         
         // Add blacklist if non-empty

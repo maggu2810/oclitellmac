@@ -28,6 +28,8 @@
     "enabled": "OPTIONAL: Set to false to temporarily disable this endpoint (default: true)",
     "enabledCategories": "OPTIONAL: Array of non-chat model categories to enable (default: [] = chat only). Valid: ['embedding', 'audio_speech', 'transcription', 'image_generation', 'video_generation', 'ocr', 'ranking', 'router']",
     "enableAllCategories": "OPTIONAL: Set to true to enable all non-chat models (default: false). Overrides enabledCategories.",
+    "providerOptions": "OPTIONAL: Forwarded into the injected provider's options block. Fields: timeout, chunkTimeout, headerTimeout, setCacheKey. See CONFIGURATION.md.",
+    "env": "OPTIONAL: Array of env var names OpenCode checks for the API key (top-level field, not inside providerOptions). Rarely needed since apiKey is injected directly.",
     "fallbackToCache": "If true, use cached model/budget data when endpoint is unreachable (default: true)",
     "timeout": "Request timeout in milliseconds (default: 30ms, example shows 10000ms)",
     "budgetPollInterval": "How often to poll budget data in milliseconds (default: 60ms, example shows 60000ms = 1 minute)"
@@ -49,7 +51,14 @@
         "baseUrl": "https://your-litellm-proxy.example.com",
         "apiKey": "sk-your-api-key-here",
         "providerName": "Production LiteLLM",
-        "enabled": true
+        "enabled": true,
+        "providerOptions": {
+          "timeout": 600000,
+          "chunkTimeout": 30000,
+          "headerTimeout": 10000,
+          "setCacheKey": true
+        },
+        "env": ["LITELLM_API_KEY"]
       }
     ]
   },
