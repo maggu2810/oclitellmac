@@ -33,14 +33,16 @@ function getFirst(...sources: Array<[AnyRecord, string]>): any {
 /**
  * Map LiteLLM capability flags to flat OpenCode ModelConfig boolean fields.
  *
- * OpenCode ModelConfig fields (provider.ts):
+ * OpenCode ModelConfig fields (packages/core/src/v1/config/provider.ts —
+ * see docs/litellm-integration/source-map.md for the exact commit):
  *     tool_call   — supports_function_calling / supports_parallel_function_calling
  *     attachment  — supports_vision (image input)
  *     reasoning   — supports_reasoning
  *     temperature — no LiteLLM source; True for all chat models
  *
- * 'interleaved' is intentionally omitted: the schema only accepts `true` (not
- * false) and there is no reliable LiteLLM source for it.
+ * 'interleaved' is intentionally omitted: there is no reliable LiteLLM
+ * source for which provider-specific field name reasoning text should be
+ * routed to (see docs/litellm-integration/field-coverage-comparison.md §2a).
  */
 export function mapFlags(
 	hub: AnyRecord,
@@ -106,7 +108,8 @@ export function mapModalities(
  * OpenCode requires both cost.input and cost.output; if either is missing
  * from both sources, the whole cost block is omitted.
  *
- * Schema (provider.ts L22-36):
+ * Schema (packages/core/src/v1/config/provider.ts — see
+ * docs/litellm-integration/source-map.md for the exact commit):
  *     cost.input          number   required
  *     cost.output         number   required
  *     cost.cache_read     number?  optional
@@ -115,6 +118,11 @@ export function mapModalities(
  *     cost.context_over_200k.output   number   (required inside the sub-struct)
  *     cost.context_over_200k.cache_read  number?
  *     cost.context_over_200k.cache_write number?
+ *
+ * All values are converted from LiteLLM's USD-per-single-token convention
+ * to OpenCode's USD-per-million-token convention — see
+ * USD_PER_TOKEN_TO_PER_MILLION above and
+ * docs/litellm-integration/field-coverage-comparison.md §2a.
  */
 export function mapCost(hub: AnyRecord, info: AnyRecord): AnyRecord | null {
 	const inputCost = getFirst(
@@ -200,7 +208,8 @@ export function mapVariants(
  * OpenCode requires both limit.context and limit.output; if either is
  * absent from both sources, the whole limit block is omitted.
  *
- * Schema (provider.ts L38-44):
+ * Schema (packages/core/src/v1/config/provider.ts — see
+ * docs/litellm-integration/source-map.md for the exact commit):
  *     limit.context   number   required
  *     limit.input     number?  optional (set to same value as context)
  *     limit.output    number   required

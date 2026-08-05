@@ -5,17 +5,25 @@
 - [x] `package.json` - Package configuration with dependencies
 - [x] `tsconfig.json` - TypeScript configuration
 - [x] `README.md` - Technical documentation (server plugin)
+- [x] `ARCHITECTURE.md` - Pipeline stages and data flow
 - [x] `IMPLEMENTATION.md` - Implementation details and summary
+- [x] `VERIFICATION.md` - This checklist
 - [x] `config-example.json` - Example configuration file
 - [x] `.gitignore` - Git ignore rules
-- [x] `src/index.ts` - Main plugin entry point (5.1 KB)
-- [x] `src/config.ts` - Configuration schema and loader (1.7 KB)
-- [x] `src/state.ts` - State management with file locking (2.9 KB)
-- [x] `src/fetcher.ts` - LiteLLM API client (4.2 KB)
-- [x] `src/provider.ts` - Provider/model builder (3.6 KB)
-- [x] `src/budget.ts` - Budget tracking logic (2.2 KB)
+- [x] `src/index.ts` - Main plugin entry point (`config` + `chat.message` hooks)
+- [x] `src/config.ts` - Zod configuration schema and loader
+- [x] `src/paths.ts` - XDG-compliant config/state path resolution
+- [x] `src/fetch.ts` - LiteLLM API client (`/public/model_hub`, `/v1/model/info`, `/key/info`)
+- [x] `src/categorize.ts` - Model category detection (chat, embedding, TTS, etc.)
+- [x] `src/map.ts` - Field mapping (LiteLLM → OpenCode `ModelConfig`)
+- [x] `src/build.ts` - `ModelConfig` entry construction
+- [x] `src/filter.ts` - Blacklist generation for non-chat models
+- [x] `src/transform.ts` - Pipeline orchestration (fetch → categorize → map → build)
+- [x] `src/state.ts` - State management with file locking
+- [x] `src/budget.ts` - Budget tracking logic (polling + event-based)
 
-**Total:** 12 files, ~500 lines of TypeScript
+**Total:** 11 source files, see [IMPLEMENTATION.md](IMPLEMENTATION.md) for
+the full file structure.
 
 ## 🎯 Features Implemented
 
@@ -44,15 +52,15 @@
 ### Robustness
 - [x] File locking via Promise serialization
 - [x] Comprehensive error handling
-- [x] Clear logging with `[oclitellmac]` prefix
+- [x] Clear logging with `[oclitellmac-server]` prefix
 - [x] Graceful degradation when endpoints fail
 - [x] Enable/disable individual endpoints
 - [x] Configurable timeouts
 
 ### Code Quality
 - [x] TypeScript with strict mode
-- [x] Type-safe configuration with `@effect/schema`
-- [x] Modular architecture (6 source files)
+- [x] Type-safe configuration with `zod`
+- [x] Modular pipeline architecture (11 source files), shared design with `tools/config-generator`
 - [x] Clear function documentation
 - [x] Consistent error messages
 
@@ -95,7 +103,7 @@
 
 ### Basic Functionality Tests
 - [ ] OpenCode starts without errors
-- [ ] Look for `[oclitellmac] Loaded configuration` in logs
+- [ ] Look for `[oclitellmac-server] Loaded configuration` in logs
 - [ ] Providers appear in OpenCode model picker
 - [ ] Models are selectable
 - [ ] Can send chat messages using LiteLLM models
@@ -142,13 +150,13 @@
 ## 📊 Expected Log Output
 
 ```
-[oclitellmac] Loaded configuration from /home/user/.config/oclitellmac/server.json
-[oclitellmac] Config hook: Injecting providers...
-[oclitellmac] Fetching models for my-litellm from https://litellm.example.com...
-[oclitellmac] Loaded 15 models for my-litellm
-[oclitellmac] Started budget tracking for my-litellm (interval: 60s)
-[oclitellmac] Provider injection complete: 1 fresh, 0 cached, 0 failed
-[oclitellmac] Budget data updated for my-litellm
+[oclitellmac-server] Loaded configuration from /home/user/.config/oclitellmac/server.json
+[oclitellmac-server] Config hook: Injecting providers...
+[oclitellmac-server] Fetching models for my-litellm from https://litellm.example.com...
+[oclitellmac-server] Loaded 15 models for my-litellm
+[oclitellmac-server] Started budget tracking for my-litellm (interval: 60s)
+[oclitellmac-server] Provider injection complete: 1 fresh, 0 cached, 0 failed
+[oclitellmac-server] Budget data updated for my-litellm
 ```
 
 ## 🚨 Common Issues & Solutions
@@ -180,7 +188,7 @@ The plugin is working correctly if:
 5. ✅ State directory and files are created
 6. ✅ Budget data updates periodically and after messages
 7. ✅ Fallback to cache works when endpoint is unreachable
-8. ✅ Clear log messages with `[oclitellmac]` prefix
+8. ✅ Clear log messages with `[oclitellmac-server]` prefix
 
 ## 🎉 Next Steps
 

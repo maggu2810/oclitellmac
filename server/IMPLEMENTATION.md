@@ -12,15 +12,27 @@ plugins/oclitellmac/server/
 ├── package.json
 ├── tsconfig.json
 ├── README.md
+├── ARCHITECTURE.md
+├── IMPLEMENTATION.md
+├── VERIFICATION.md
 ├── config-example.json          # Example configuration
 └── src/
-    ├── index.ts                 # Main plugin entry (5.1 KB)
-    ├── config.ts                # Configuration loader (1.7 KB)
-    ├── state.ts                 # State management with file locking (2.9 KB)
-    ├── fetcher.ts               # LiteLLM API client (4.2 KB)
-    ├── provider.ts              # Provider/model builder (3.6 KB)
-    └── budget.ts                # Budget tracking (2.2 KB)
+    ├── index.ts                 # Main plugin entry — config hook + chat.message hook
+    ├── config.ts                # Zod configuration schema and loader
+    ├── paths.ts                 # XDG-compliant config/state path resolution
+    ├── fetch.ts                 # LiteLLM API client (model hub, model info, key info)
+    ├── categorize.ts             # Model category detection (chat, embedding, TTS, etc.)
+    ├── map.ts                   # Field mapping (LiteLLM → OpenCode ModelConfig)
+    ├── build.ts                 # ModelConfig entry construction
+    ├── filter.ts                # Blacklist generation for non-chat models
+    ├── transform.ts             # Pipeline orchestration (fetch → categorize → map → build)
+    ├── state.ts                 # State management with file locking
+    └── budget.ts                # Budget tracking (polling + event-based)
 ```
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full pipeline data flow and
+[docs/litellm-integration/shared-pipeline-architecture.md](../../../docs/litellm-integration/shared-pipeline-architecture.md)
+for the architecture shared with `tools/config-generator`.
 
 ## 🚀 Installation Steps
 
@@ -64,6 +76,11 @@ nano ~/.config/oclitellmac/server.json
 }
 ```
 
+See [CONFIGURATION.md](../docs/CONFIGURATION.md) for the full field
+reference, including optional `enabledCategories`, `enableAllCategories`,
+`providerOptions` (timeout/chunkTimeout/headerTimeout/setCacheKey), and
+`env`.
+
 ### 3. Add Plugin to OpenCode
 
 ```bash
@@ -98,31 +115,42 @@ The plugin will automatically:
 - No manual `opencode.json` editing required
 - API keys embedded directly in provider options
 
-### ✅ 3. Model Discovery
+### ✅ 3. Model Discovery & Field Mapping
 - Fetches from `/public/model_hub` (public, no auth)
 - Fetches from `/v1/model/info` (authenticated, detailed metadata)
-- Maps LiteLLM fields to OpenCode model schema
-- Supports all model capabilities: tool_call, attachment, reasoning, etc.
+- Maps LiteLLM fields to OpenCode `ModelConfig` schema
+  (`tool_call`, `attachment`, `reasoning`, `temperature`, `cost`, `limit`,
+  `modalities`, `status`, `variants`) via the modular
+  `categorize.ts` → `map.ts` → `build.ts` → `transform.ts` pipeline
+- Converts LiteLLM's per-token costs to OpenCode's per-million-token
+  convention (see [CONFIGURATION.md](../docs/CONFIGURATION.md))
+- Surfaces LiteLLM's reasoning-effort support as OpenCode `variants`
 
-### ✅ 4. Smart Caching & Fallback
+### ✅ 4. Category Filtering
+- Non-chat models (embedding, TTS, image generation, etc.) are blacklisted
+  by default via `filter.ts`
+- Opt in per-category with `enabledCategories`, or all at once with
+  `enableAllCategories`
+
+### ✅ 5. Smart Caching & Fallback
 - Caches provider data to `~/.local/state/oclitellmac/providers/`
 - Falls back to cached data if endpoint unreachable
 - Logs clear warnings when using cached data
 
-### ✅ 5. Budget Tracking
+### ✅ 6. Budget Tracking
 - Polls `/key/info` every 60 seconds (configurable)
 - Fetches after each chat message (redundant for cost tracking)
 - Stores data in `~/.local/state/oclitellmac/key-info/`
 - File locking prevents concurrent write collisions
 
-### ✅ 6. File Locking
-- `StateManager` implements lock-based write serialization
+### ✅ 7. File Locking
+- `StateManager` (`state.ts`) implements lock-based write serialization
 - Prevents race conditions when multiple sources write simultaneously
 - Separate locks for provider cache and budget data
 
-### ✅ 7. Comprehensive Logging
-- Logs via console and OpenCode's logging system
-- Clear `[oclitellmac]` prefix for easy filtering
+### ✅ 8. Comprehensive Logging
+- Logs via `input.client.app.log()` (OpenCode's structured logging)
+- Clear `[oclitellmac-server]` service tag for easy filtering
 - Logs successes, errors, and fallback behavior
 
 ## 📊 Data Flow
@@ -134,13 +162,13 @@ The plugin will automatically:
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  oclitellmac/server plugin loads                             │
+│  oclitellmac/server plugin loads (config hook)               │
 │  1. Reads ~/.config/oclitellmac/server.json                  │
 │  2. For each enabled endpoint:                               │
-│     - Fetches /public/model_hub                              │
-│     - Fetches /v1/model/info (with auth)                     │
-│     - Builds model configs                                   │
+│     - Fetches /public/model_hub + /v1/model/info in parallel │
+│     - transformModels(): categorize → map → build per model  │
 │     - Caches to ~/.local/state/oclitellmac/providers/        │
+│     - buildBlacklist() for non-chat models                   │
 │     - Injects provider via config hook                       │
 │     - Starts budget tracking                                 │
 └─────────────────────────────────────────────────────────────┘
@@ -157,7 +185,7 @@ The plugin will automatically:
 ┌─────────────────────────────────────────────────────────────┐
 │  Budget Tracking (Continuous)                                │
 │  1. Every 60 seconds: Poll /key/info for all providers       │
-│  2. After each message: Fetch /key/info                      │
+│  2. After each message (chat.message hook): Fetch /key/info  │
 │  3. Store to ~/.local/state/oclitellmac/key-info/            │
 │     (with file locking)                                      │
 └─────────────────────────────────────────────────────────────┘
@@ -187,6 +215,7 @@ After plugin runs, the following structure is created:
     "gpt-4": {
       "id": "gpt-4",
       "name": "gpt-4",
+      "status": "active",
       "tool_call": true,
       "attachment": true,
       "temperature": true,
@@ -195,8 +224,8 @@ After plugin runs, the following structure is created:
         "output": ["text"]
       },
       "cost": {
-        "input": 0.00003,
-        "output": 0.00006
+        "input": 30,
+        "output": 60
       },
       "limit": {
         "context": 8192,
@@ -204,14 +233,22 @@ After plugin runs, the following structure is created:
         "output": 4096
       }
     }
+  },
+  "categories": {
+    "gpt-4": "chat"
   }
 }
 ```
+
+**Note**: `cost.input` / `cost.output` are USD per **million** tokens (the
+OpenCode/models.dev convention), not LiteLLM's raw USD-per-token value — see
+[CONFIGURATION.md](../docs/CONFIGURATION.md) for the conversion.
 
 **Budget data format** (`key-info/<key>.json`):
 ```json
 {
   "providerKey": "my-litellm",
+  "providerName": "My LiteLLM",
   "fetchedAt": 1736647260000,
   "keyInfo": {
     "key_alias": "user-key",
@@ -231,9 +268,13 @@ After plugin runs, the following structure is created:
 |-------|------|----------|-------------|
 | `baseUrl` | string | ✅ | LiteLLM proxy base URL (without `/v1`) |
 | `apiKey` | string | ✅ | Bearer token for API authentication |
-| `providerName` | string | ✅ | Display name in OpenCode UI |
 | `providerKey` | string | ✅ | Unique provider identifier |
+| `providerName` | string | ❌ | Display name in OpenCode UI (auto-formatted from `providerKey` if omitted) |
 | `enabled` | boolean | ❌ | Default: `true`. Whether to load this endpoint |
+| `enabledCategories` | string[] | ❌ | Non-chat model categories to enable |
+| `enableAllCategories` | boolean | ❌ | Default: `false`. Enable all non-chat models |
+| `providerOptions` | object | ❌ | Forwarded into `options`: `timeout`, `chunkTimeout`, `headerTimeout`, `setCacheKey` |
+| `env` | string[] | ❌ | Env var names OpenCode checks for the API key (top-level, sibling of `options`) |
 
 ### Global Options
 
@@ -243,11 +284,13 @@ After plugin runs, the following structure is created:
 | `budgetPollInterval` | number | `60` | How often to poll `/key/info` in seconds |
 | `fallbackToCache` | boolean | `true` | Use cached data if endpoint unreachable |
 
+Full reference: [CONFIGURATION.md](../docs/CONFIGURATION.md)
+
 ## 🐛 Troubleshooting
 
 ### Plugin not loading
 
-1. Check logs for `[oclitellmac]` entries
+1. Check logs for `[oclitellmac-server]` entries
 2. Verify config file exists: `~/.config/oclitellmac/server.json`
 3. Validate JSON syntax (use `jq . < server.json`)
 4. Check at least one endpoint is enabled
@@ -256,7 +299,7 @@ After plugin runs, the following structure is created:
 
 1. Verify endpoint URL is accessible: `curl https://your-proxy.example.com/public/model_hub`
 2. Check API key is valid: `curl -H "Authorization: Bearer sk-..." https://your-proxy.example.com/v1/model/info`
-3. Look for error logs with `[oclitellmac]` prefix
+3. Look for error logs with `[oclitellmac-server]` prefix
 4. Check if cached data exists: `ls ~/.local/state/oclitellmac/providers/`
 
 ### Budget data not updating
@@ -276,11 +319,10 @@ After plugin runs, the following structure is created:
 5. ✅ Verify providers appear in model picker
 
 ### Future Enhancements
-- **TUI plugin** (`oclitellmac/tui`): Visual TUI display of budget data (already implemented)
 - Configuration file watcher for hot-reload (no restart needed)
 - Health checks for endpoint availability
 - Retry logic with exponential backoff
-- Support for custom model filtering/blacklisting
+- Incremental/delta-based cache updates
 
 ## 📝 Technical Implementation Details
 
@@ -292,7 +334,7 @@ After plugin runs, the following structure is created:
    - Clean, automatic provider registration
 
 2. **File Locking via Promise Serialization**
-   - Prevents concurrent writes using Map<key, Promise>
+   - Prevents concurrent writes using `Map<key, Promise>`
    - No external lock file dependencies
    - Automatic cleanup on completion
 
@@ -312,19 +354,20 @@ After plugin runs, the following structure is created:
 - ✅ Clear function documentation
 - ✅ Consistent error handling
 - ✅ Comprehensive logging
-- ✅ Type-safe configuration with `@effect/schema`
-- ✅ Modular architecture (6 separate files)
+- ✅ Type-safe configuration with `zod`
+- ✅ Modular pipeline architecture (11 source files), shared design with
+  `tools/config-generator` (see
+  [shared-pipeline-architecture.md](../../../docs/litellm-integration/shared-pipeline-architecture.md))
 
 ## 🎉 Success!
 
-The server plugin is now complete and ready for production use!
+The server plugin is complete and in active use.
 
-**Total implementation:**
-- 6 source files
-- ~500 lines of TypeScript
-- Full LiteLLM integration
+**Implementation**:
+- 11 source files (`~/plugins/oclitellmac/server/src/`)
+- Full LiteLLM integration (model discovery, field mapping, category filtering)
+- Cost-unit-correct pricing display and tracking
+- Reasoning-effort variant support
 - Smart caching and fallback
 - Budget tracking infrastructure
 - Comprehensive documentation
-
-**Next:** Test with your actual LiteLLM endpoints and verify everything works as expected!
