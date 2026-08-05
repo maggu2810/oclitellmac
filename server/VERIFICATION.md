@@ -69,7 +69,7 @@ the full file structure.
 1. **Install dependencies:**
    ```bash
    cd /path/to/plugins/oclitellmac
-   npm install
+   bun install
    ```
 
 2. **Create configuration:**
@@ -96,7 +96,7 @@ the full file structure.
 ## 🧪 Testing Checklist
 
 ### Pre-Test Setup
-- [ ] npm install completed successfully
+- [ ] `bun install` completed successfully
 - [ ] Configuration file created at `~/.config/oclitellmac/server.json`
 - [ ] At least one endpoint configured with valid URL and API key
 - [ ] Plugin added to OpenCode

@@ -2,6 +2,11 @@
 
 This guide covers the steps to publish the oclitellmac plugin to the npm registry.
 
+This plugin uses `bun` for building and publishing (matches the tracked `bun.lock`
+lockfile and the OpenCode project's own package manager). `npm` is only used for
+the one-time login step below — `bun` has no independent login flow and reads the
+same `~/.npmrc` auth token that `npm login` writes.
+
 ## Prerequisites
 
 ### 1. npm Account
@@ -16,7 +21,9 @@ Log in to npm locally (one-time setup):
 npm login
 ```
 
-This saves your credentials to `~/.npmrc` and persists across sessions. You only need to run this once per machine.
+This saves your credentials to `~/.npmrc` and persists across sessions. You only
+need to run this once per machine. `bun publish` and `bun pm` commands read this
+same token — there is no separate `bun login`.
 
 ---
 
@@ -50,16 +57,16 @@ You should see:
 
 ### Step 2: Verify Tarball Contents (Dry Run)
 
-Before publishing, verify what files will be included in the npm package:
+Before publishing, verify what files will be included in the package:
 
 ```bash
-npm pack --dry-run
+bun pm pack --dry-run
 ```
 
 **Expected files:**
 - `package.json` — Package metadata (always included)
-- `README.md` — Package homepage (always included by npm)
-- `LICENSE` — License file (always included by npm)
+- `README.md` — Package homepage (always included)
+- `LICENSE` — License file (always included)
 - `dist/server.js` — Server plugin bundle (from `"files": ["dist/"]`)
 - `dist/tui.js` — TUI plugin bundle (from `"files": ["dist/"]`)
 
@@ -77,7 +84,7 @@ If unexpected files appear, check the `"files"` field in `package.json` — it s
 Publish the package to npm:
 
 ```bash
-npm publish --access public
+bun publish --access public
 ```
 
 **About the `--access public` flag:**
@@ -88,41 +95,37 @@ To always publish publicly regardless of package type, include the flag.
 
 **Alternative** — Omit the flag for unscoped packages:
 ```bash
-npm publish
+bun publish
 ```
 
 **Expected output:**
 ```
-npm notice 
-npm notice 📦  @maggu2810/oclitellmac@0.1.0
-npm notice === Tarball Contents === 
-npm notice 1.2kB package.json          
-npm notice 4.5kB README.md             
-npm notice 1.1kB LICENSE               
-npm notice 45.2kB dist/server.js       
-npm notice 23.1kB dist/tui.js          
-npm notice === Tarball Details === 
-npm notice name:          @maggu2810/oclitellmac                  
-npm notice version:       0.1.0                                   
-npm notice filename:      maggu2810-oclitellmac-0.1.0.tgz        
-npm notice package size:  18.3 kB                                
-npm notice unpacked size: 75.1 kB                                
-npm notice shasum:        abc123...                              
-npm notice integrity:     sha512-xyz789...                       
-npm notice total files:   5                                      
-npm notice 
-npm notice Publishing to https://registry.npmjs.org/
-+ @maggu2810/oclitellmac@0.1.0
+bun publish v1.3.3 (ca7428e9)
+
+packed 1.5kB package.json
+packed 6.0kB README.md
+packed 1.1kB LICENSE
+packed 21.5kB dist/server.js
+packed 17.2kB dist/tui.js
+
+Total files: 5
+Shasum: 839ace2e087f25ef75455a82c1eeb21196ab75a7
+Integrity: sha512-VGmg9DFVLN546[...]HBaQLMXp01D8A==
+Unpacked size: 47.3kB
+Packed size: 12.7kB
+Tag: latest
+Access: public
+Registry: https://registry.npmjs.org/
+
+ + oclitellmac@0.4.0
 ```
 
 ### Step 4: Verify Publication
 
 Check the package page on npmjs.com:
 ```
-https://www.npmjs.com/package/@maggu2810/oclitellmac
+https://www.npmjs.com/package/oclitellmac
 ```
-
-(Replace `@maggu2810/oclitellmac` with your package name for unscoped packages.)
 
 ---
 
@@ -130,21 +133,21 @@ https://www.npmjs.com/package/@maggu2810/oclitellmac
 
 ### Version Bump Workflow
 
-Use npm's built-in versioning commands:
+Use bun's built-in versioning command:
 
 **Patch release** (bug fixes, no new features):
 ```bash
-npm version patch
+bun pm version patch
 ```
 
 **Minor release** (new features, backward compatible):
 ```bash
-npm version minor
+bun pm version minor
 ```
 
 **Major release** (breaking changes):
 ```bash
-npm version major
+bun pm version major
 ```
 
 This automatically:
@@ -160,16 +163,16 @@ git add .
 git commit -m "feat: add new feature"
 
 # 2. Bump version (creates commit + tag)
-npm version minor
+bun pm version minor
 
 # 3. Build the plugin
 bun run build
 
 # 4. Verify tarball (optional but recommended)
-npm pack --dry-run
+bun pm pack --dry-run
 
 # 5. Publish
-npm publish --access public
+bun publish --access public
 
 # 6. Push commits and tags to GitHub
 git push && git push --tags
@@ -179,13 +182,32 @@ git push && git push --tags
 
 ## Troubleshooting
 
-### Error: `npm ERR! 402 Payment Required`
+### Error: `401 Unauthorized` on `whoami`, `404 Not Found - PUT .../<package>` on publish
+
+**Cause:** The auth token saved in `~/.npmrc` is expired, revoked, or otherwise
+invalid. npm's registry intentionally returns `404` (not `401`/`403`) for a
+publish `PUT` from an unauthorized caller — this avoids leaking whether a
+package name exists to callers without write access. It looks like a
+package-name or permission problem, but it's really an invalid credential.
+
+**Diagnose:**
+```bash
+npm whoami
+```
+If this also fails with `401 Unauthorized`, the token itself is the problem —
+not the package name, not `--access public`, not scope ownership.
+
+**Solution:** Re-run `npm login` to obtain a fresh token (rewrites `~/.npmrc`).
+`bun publish` and `bun pm` commands share this same token; there is no
+separate `bun login`.
+
+### Error: `402 Payment Required`
 
 **Cause:** Trying to publish a scoped package as private without a paid npm account.
 
 **Solution:** Add `--access public` to the publish command.
 
-### Error: `npm ERR! 403 Forbidden`
+### Error: `403 Forbidden`
 
 **Cause:** Not logged in or insufficient permissions.
 
@@ -194,13 +216,13 @@ git push && git push --tags
 2. Verify you own the package name (for updates)
 3. Check your npm account has publish permissions
 
-### Error: `npm ERR! code ENOENT`
+### Error: `code ENOENT`
 
 **Cause:** `dist/` directory missing.
 
 **Solution:** Run `bun run build` before publishing.
 
-### Error: `npm ERR! 404 Not Found - PUT https://registry.npmjs.org/@scope/package`
+### Error: `404 Not Found - PUT https://registry.npmjs.org/@scope/package`
 
 **Cause:** Scope doesn't exist on npm (first publish of a scoped package).
 
@@ -208,6 +230,7 @@ git push && git push --tags
 1. Verify the scope matches your npm username
 2. Add `--access public` flag
 3. Ensure you're logged in to the correct npm account
+4. If `npm whoami` also fails, see the auth-token entry above first
 
 ### Warning: Files in tarball look wrong
 
@@ -216,7 +239,7 @@ git push && git push --tags
 **Solutions:**
 1. Check `"files": ["dist/"]` in `package.json`
 2. Run `bun run build` to generate `dist/`
-3. Run `npm pack --dry-run` to verify before publishing
+3. Run `bun pm pack --dry-run` to verify before publishing
 
 ---
 
@@ -225,3 +248,4 @@ git push && git push --tags
 - [DEVELOPMENT.md](DEVELOPMENT.md) — Build process details
 - [README.md](../README.md) — Package overview (shown on npmjs.com)
 - [npm documentation](https://docs.npmjs.com/) — Official npm publishing guide
+- [bun publish documentation](https://bun.sh/docs/cli/publish) — Official bun publish reference
