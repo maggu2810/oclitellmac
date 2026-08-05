@@ -1,6 +1,6 @@
 {
   "name": "oclitellmac",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "OpenCode LiteLLM Auto-Config - Automatic multi-proxy configuration with budget tracking",
   "type": "module",
   "exports": {
