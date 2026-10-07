@@ -10,6 +10,14 @@ This guide covers common issues when using the oclitellmac plugin.
 4. [TUI Shows "Waiting for server..."](#tui-shows-waiting-for-server)
 5. [Budget Not Updating](#budget-not-updating)
 6. [Configuration File Issues](#configuration-file-issues)
+7. [OpenCode v2 Plugin Errors](#opencode-v2-plugin-errors)
+8. [Anthropic Route Errors](#anthropic-route-errors)
+
+## Log Locations
+
+- Server plugin: `~/.local/state/oclitellmac/server.log` (the server plugin context has no logging API, so the plugin writes its own log)
+- TUI plugin: under `~/.local/state/oclitellmac/log/`
+- Config: `~/.config/oclitellmac/server.json`; state: `~/.local/state/oclitellmac/` (`providers/`, `key-info/`)
 
 ---
 
@@ -17,7 +25,7 @@ This guide covers common issues when using the oclitellmac plugin.
 
 ### Symptoms
 - No providers appear in OpenCode model picker
-- No `[oclitellmac]` messages in OpenCode logs
+- Nothing in `~/.local/state/oclitellmac/server.log`
 - Models from LiteLLM endpoints not available
 
 ### Solutions
@@ -41,8 +49,7 @@ This guide covers common issues when using the oclitellmac plugin.
    - Unclosed quotes or brackets
    - Trailing commas (invalid in JSON)
 
-3. **Check OpenCode logs for error messages**:
-   - Look for `[oclitellmac]` prefix
+3. **Check the server log** (`~/.local/state/oclitellmac/server.log`) for error messages:
    - Common errors: "Failed to load config", "Failed to fetch models"
 
 4. **Ensure at least one endpoint has `"enabled": true`**:
@@ -60,15 +67,17 @@ This guide covers common issues when using the oclitellmac plugin.
    ```
 
 5. **Verify plugin is registered in OpenCode config**:
-   - Check `.opencode/opencode.json` contains plugin entry
-   - For npm install: `opencode plugin list` should show `oclitellmac`
+   - Check `~/.config/opencode/opencode.jsonc` lists the plugin under `plugin` (or `plugins`)
+   - `opencode plugin list` should show `oclitellmac`
+   - For a local checkout the path must be the built `dist/` directory, see [OpenCode v2 Plugin Errors](#opencode-v2-plugin-errors)
+   - Registration details: [read here](opencode-plugin-cli.md) when you need config file or spec rules
 
 ---
 
 ## Endpoint Unreachable
 
 ### Symptoms
-- "Using cached data" warnings in OpenCode logs
+- "Using cached data" warnings in `~/.local/state/oclitellmac/server.log`
 - Provider appears but with stale model list
 - Budget data not updating
 
@@ -112,7 +121,7 @@ This guide covers common issues when using the oclitellmac plugin.
 ### Symptoms
 - Provider appears in model picker
 - No models listed under the provider
-- OpenCode logs show provider loaded successfully
+- `server.log` shows the provider loaded successfully
 
 ### Solutions
 
@@ -170,8 +179,8 @@ This guide covers common issues when using the oclitellmac plugin.
 ### Solutions
 
 1. **Verify server plugin is loaded**:
-   - Check OpenCode logs for `[oclitellmac]` messages
-   - Look for: "Loaded configuration", "Fetching models", "Started budget tracking"
+   - Check `~/.local/state/oclitellmac/server.log`
+   - Look for configuration loading, model fetching and budget tracking entries
 
 2. **Check budget files exist**:
    ```bash
@@ -215,8 +224,7 @@ This guide covers common issues when using the oclitellmac plugin.
 ### Solutions
 
 1. **Check server plugin is running**:
-   - Look for `[oclitellmac]` logs with recent timestamps
-   - Expected: "Budget data updated for <provider-key>"
+   - Check `~/.local/state/oclitellmac/server.log` for recent entries
 
 2. **Verify `/key/info` endpoint is accessible**:
    ```bash
@@ -259,14 +267,14 @@ This guide covers common issues when using the oclitellmac plugin.
 
 7. **Restart OpenCode to reset file watcher**:
    - File watcher may have stopped due to error
-   - Check OpenCode logs for file watch warnings
+   - Check the TUI log under `~/.local/state/oclitellmac/log/` for file watch warnings
 
 ---
 
 ## Configuration File Issues
 
 ### Symptoms
-- "Failed to load config" in OpenCode logs
+- "Failed to load config" in `~/.local/state/oclitellmac/server.log`
 - Plugin not starting
 - Validation errors
 
@@ -340,16 +348,54 @@ This guide covers common issues when using the oclitellmac plugin.
 
 ---
 
+## OpenCode v2 Plugin Errors
+
+### "Plugin must export a default definition with an id and an effect or setup function"
+
+**Cause:** The loaded server entry is a V1 build (`export default async function(input)`), for example the `oclitellmac@0.4.0` npm release.
+
+**Fix:** Use a build made for OpenCode v2 (0.6.0 or later, or a local `bun run build`).
+
+### "Invalid V2 TUI plugin module"
+
+**Cause:** The TUI entry exports the V1 shape `{ id, tui }` instead of `{ id, setup(ctx) }`.
+
+**Fix:** Same as above: use a v2 build.
+
+### "Cannot find package '@opencode/ai'"
+
+**Cause:** A model uses a provider package that is not bundled in the opencode binary (for example `@opencode/ai/providers/anthropic-compatible`). Plugins can only use the bundled providers; oclitellmac uses `openai-compatible` and `anthropic`.
+
+**Fix:** Update to a current oclitellmac build. If you modified the plugin, only reference bundled provider packages.
+
+### Plugin silently not loading from a local path
+
+**Cause:** The configured path points at the project root. For a local path OpenCode resolves `<dir>/server` and `<dir>/tui` on the filesystem and ignores `package.json` `exports`; the root has no such files.
+
+**Fix:** Run `bun run build` and register the absolute path of the `dist/` directory. See [read here](opencode-plugin-cli.md) when you need the local-path rules.
+
+---
+
+## Anthropic Route Errors
+
+### `budget_exceeded` or 404 on `/v1/messages`
+
+**Cause:** Claude models (default `anthropicModels: ["claude-*"]`) use the Anthropic-native route. The gateway must expose `POST <baseUrl>/v1/messages`; a 404 means it does not, and `budget_exceeded` is the gateway rejecting the key's budget on that route.
+
+**Fix:** Verify the gateway exposes `/v1/messages` and check the key budget (`/key/info`). To send a model through the OpenAI-compatible route instead, adjust `anthropicModels`; see [read here](CONFIGURATION.md) when configuring `anthropicModels`.
+
+---
+
 ## Additional Help
 
 If none of the above solutions work:
 
 1. **Check OpenCode version compatibility**:
-   - Plugin requires OpenCode with plugin support
+   - Plugin requires OpenCode v2
    - Run `opencode --version` to check version
 
 2. **Review full logs**:
-   - Enable debug logging if available
+   - Server log and TUI log, see [Log Locations](#log-locations)
    - Look for stack traces or detailed error messages
 
 3. **Verify LiteLLM proxy is working**:

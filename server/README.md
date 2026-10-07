@@ -1,42 +1,41 @@
 # Server Plugin - Technical Reference
 
-**Plugin Type**: Server (v1 plugin API)  
+**Plugin Type**: Server (OpenCode v2 plugin API)  
 **Entry Point**: `oclitellmac/server`
 
 ## Overview
 
-The server plugin automatically discovers and configures LiteLLM proxy endpoints as OpenCode providers. It uses a modular pipeline architecture to fetch, categorize, and inject model configurations at runtime.
+The server plugin automatically discovers LiteLLM proxy endpoints and registers them as OpenCode providers. It uses a modular pipeline to fetch, categorize and convert model definitions at startup.
+
+When looking for the overall design, data flows or the registered provider and model shape, [read here](ARCHITECTURE.md).
 
 ### Key Responsibilities
 
 1. Load configuration from `~/.config/oclitellmac/server.json`
 2. Fetch models from LiteLLM endpoints (`/public/model_hub` and `/v1/model/info`)
 3. Categorize models (chat, embedding, TTS, etc.)
-4. Apply category-based filtering (blacklist non-chat models by default)
-5. Inject providers into OpenCode config via `config` hook
-6. Track budget data via `/key/info` polling
-7. Write budget data to files for TUI consumption
-
-### Architecture Pattern
-
-**Config Hook Injection Pattern** (inspired by BlakeHastings plugin):
-- Directly mutates `config.provider` object at runtime
-- No user `opencode.json` editing required
-- Clean, automatic provider registration
+4. Disable non-chat models by default (per-endpoint category opt-in)
+5. Route each model to the OpenAI-compatible or the Anthropic-native route
+6. Register providers and models through `ctx.provider.transform`
+7. Track budget data via `/key/info` polling
+8. Write budget data to files for TUI consumption
 
 ## Module Structure
 
 ```
 plugins/oclitellmac/server/src/
-├── index.ts           # Plugin entry, config/chat.message hooks
+├── index.ts           # Plugin entry: setup, provider registration, hooks
 ├── paths.ts           # Path management (xdg-basedir wrapper)
 ├── config.ts          # Zod schemas, config loading
 ├── fetch.ts           # HTTP client for LiteLLM endpoints
 ├── categorize.ts      # Model category detection (chat/embedding/TTS/etc.)
-├── map.ts             # Field mapping (LiteLLM → OpenCode ModelConfig)
+├── map.ts             # Field mapping (LiteLLM → model fields)
 ├── build.ts           # Model entry builder
-├── filter.ts          # Blacklist generation for non-chat models
+├── filter.ts          # Disabled-model selection for non-chat categories
 ├── transform.ts       # Pipeline orchestration
+├── match.ts           # Model ID glob matching
+├── toV2.ts            # Model entry → V2 Model.Info, per route
+├── diagnostics.ts     # Request summaries for prompt-cache debugging
 ├── budget.ts          # Budget polling and tracking
 └── state.ts           # File-based state management with locking
 ```
@@ -59,26 +58,24 @@ plugins/oclitellmac/server/src/
 - Linux: Respects `XDG_*` environment variables (default: `~/.config`, `~/.local/state`)
 - macOS/Windows: Uses Unix-style paths (`~/.config`, `~/.local/state`)
 
-See `../PATH-STRATEGY.md` for detailed rationale and alternative approaches considered.
+When looking for the rationale and alternatives considered, [read here](../docs/PATH-STRATEGY.md).
 
 #### `index.ts` - Plugin Orchestration
-- Loads configuration from `~/.config/oclitellmac/server.json`
-- Implements `config` hook (injects providers into `opcodeConfig.provider`)
-- Implements `chat.message` hook (triggers budget refresh after each message)
-- Manages provider injection with caching fallback
-- Coordinates budget tracking lifecycle
-
-**Key Functions**:
-- `config()`: Main entry point, orchestrates provider injection
-- `injectProvider()`: Fetches models, builds provider config, injects into OpenCode
-- Hook registration returns `{ config, "chat.message" }` object
+- Default export is `{ id: "oclitellmac.server", setup(ctx) }`
+- `setup` loads the configuration, fetches every enabled endpoint (with cache fallback), converts the results and registers them once with `ctx.provider.transform`
+- Registers a `prompt` session hook that triggers a budget refresh
+- Registers the optional `http.request` diagnostics hook when `cachePrefixDiagnostics` is on
+- Returns a cleanup function that stops budget polling
+- Logs to `~/.local/state/oclitellmac/server.log` (the plugin context has no logging API)
 
 #### `config.ts` - Configuration Schema
 - Defines Zod schemas for validation:
-  - `EndpointConfigSchema`: Per-endpoint settings (baseUrl, apiKey, categories, etc.)
-  - `ServerConfigSchema`: Global options (timeout, polling interval, caching)
+  - `EndpointConfigSchema`: Per-endpoint settings (baseUrl, apiKey, categories, `anthropicModels`, `providerOptions`)
+  - `ServerConfigSchema`: Global options (timeout, polling interval, caching, diagnostics)
 - Loads and validates `server.json`
 - Provides typed config interfaces
+
+For the field reference, when changing or adding configuration fields, [read here](../docs/CONFIGURATION.md).
 
 **Key Functions**:
 - `loadConfig()`: Reads and parses `~/.config/oclitellmac/server.json`
@@ -90,7 +87,7 @@ See `../PATH-STRATEGY.md` for detailed rationale and alternative approaches cons
   - `fetchModelInfo()`: GET `/v1/model/info` (requires Bearer token)
   - `fetchKeyInfo()`: GET `/key/info` (budget data)
 - Timeout handling with AbortController
-- Error handling with detailed logging
+- Derives `supports_reasoning_efforts` from the `supports_<level>_reasoning_effort` flags
 
 **Key Features**:
 - Configurable timeout (default: 30s)
@@ -112,47 +109,67 @@ See `../PATH-STRATEGY.md` for detailed rationale and alternative approaches cons
 - `ocr`, `ranking`, `router`
 
 #### `map.ts` - Field Mapping
-Maps LiteLLM API fields to OpenCode `ModelConfig` structure:
+Maps LiteLLM API fields to the model entry structure:
 
 - `mapFlags(hub, info)`: Capability flags (tool_call, attachment, reasoning, temperature)
 - `mapModalities(hub, info)`: Input/output modality arrays
 - `mapCost(hub, info)`: Cost fields (input, output, cache_read, cache_write, context_over_200k)
 - `mapLimit(hub, info)`: Token limits (context, input, output)
+- `mapVariants(info)`: Reasoning-effort variants for the OpenAI-compatible route
+- `mapThinking(hub, info)`: Thinking capabilities for the Anthropic route (`adaptive` with effort levels, or `budget`)
 
 **Priority**: Uses `getFirst()` helper to prefer `/v1/model/info` over `/public/model_hub`
 
 #### `build.ts` - Model Entry Builder
-- `buildModelEntry(hub, info, category)`: Constructs OpenCode `ModelConfig` object
-- Omits false/empty fields to keep config minimal
+- `buildModelEntry(hub, info, category)`: Constructs the model entry
+- Omits false/empty fields to keep the entry minimal
 - Always includes: `id`, `name`, `modalities`
-- Conditionally includes: capability flags (when true), `cost` (when available), `limit` (when available)
+- Conditionally includes: capability flags (when true), `cost`, `limit`, `variants` and `thinking` (when available)
 
-#### `filter.ts` - Blacklist Generation
-- `buildBlacklist(categories, enabledCategories)`: Returns array of model IDs to hide
-- Filters models where:
+#### `filter.ts` - Disabled-Model Selection
+- `buildBlacklist(categories, enabledCategories)`: Returns `[modelId, category]` pairs for models to disable
+- Selects models where:
   - Category is in `NON_CHAT_CATEGORIES`
   - Category is NOT in `enabledCategories`
-- Stable ordering (by category, then by model ID) for readable output
+- Stable ordering (by category, then by model ID)
+- `index.ts` registers the selected models with `enabled: false`; V2 has no provider blacklist
 
 #### `transform.ts` - Pipeline Orchestration
 - `transformModels(hubEntries, infoMap)`: Main pipeline function
 - Returns: `{ models: Record<string, any>, categories: Map<string, Category> }`
-- Iterates over hub entries, categorizes each model, builds model config
+- Iterates over hub entries, categorizes each model, builds the model entry
 
 **Pipeline Flow**:
 ```
 hubEntries + infoMap
   → categorize each model
-  → map LiteLLM fields to OpenCode fields
+  → map LiteLLM fields
   → build model entry
   → return { models, categories }
 ```
+
+#### `match.ts` - Model ID Matching
+- `matchesAny(id, patterns)`: Case-insensitive glob match where `*` is the only wildcard
+- Used with `anthropicModels` to choose each model's route
+
+#### `toV2.ts` - V2 Conversion
+- `toModelInfo(providerKey, entry, options)`: Converts a model entry to a V2 `Model.Info`
+- Options: `enabled`, `anthropic` (route), `supportsPromptCacheKey` (OpenAI-compatible route only)
+- Anthropic route: sets the `package` on the model and builds variants from `entry.thinking`
+- OpenAI-compatible route: variants use `reasoningEffort`
+- Costs, limits and capabilities are identical on both routes
+
+#### `diagnostics.ts` - Cache Diagnostics
+- `summarizeRequest(body)`: Counts and hashes only (breakpoints, system and tool counts, tool-schema hash, stable-prefix hash, options hash). Never content
+- `firstDivergence(previous, current)`: Index of the first block that changed since the previous request
+- Enabled by `options.cachePrefixDiagnostics`
 
 #### `budget.ts` - Budget Tracking
 - `BudgetTracker` class:
   - `startTracking(providerKey, providerName, client)`: Initiates periodic polling
   - `fetchAndStore(providerKey, providerName, client)`: One-time budget fetch
-  - `stopTracking(providerKey)`: Cleanup
+  - `stopTracking(providerKey)`: Cleanup for one provider
+  - `stopAll()`: Cleanup for all providers (called from the setup cleanup)
 - Stores budget data to `~/.local/state/oclitellmac/key-info/<providerKey>.json`
 - Polling interval configurable via `budgetPollInterval` (default: 60s)
 - Includes `providerName` in budget files for TUI display
@@ -179,108 +196,6 @@ hubEntries + infoMap
 
 **Locking Strategy**: Promise serialization via `Map<key, Promise>` - no external lock files needed
 
-## Data Flow
-
-### Startup Flow (Config Hook)
-
-```
-1. Load ~/.config/oclitellmac/server.json
-   ↓
-2. For each enabled endpoint:
-   a. Create LiteLLMClient
-   b. Fetch /public/model_hub (required)
-   c. Fetch /v1/model/info (optional, if apiKey provided)
-   ↓
-3. Transform pipeline:
-   hubEntries + infoMap → transformModels()
-   ├── categorizeModel() for each model
-   ├── buildModelEntry() for each model
-   └── returns { models, categories }
-   ↓
-4. Filter non-chat models:
-   buildBlacklist(categories, enabledCategories)
-   → blacklist: string[]
-   ↓
-5. Inject provider into opcodeConfig.provider[providerKey]:
-   {
-     npm: "@ai-sdk/openai-compatible",
-     name: providerName,
-     key: apiKey,
-     options: { baseURL, apiKey, ...providerOptions },
-     blacklist: [...],
-     models: { ... }
-   }
-   ↓
-6. Cache to ~/.local/state/oclitellmac/providers/
-   ↓
-7. Start budget tracking (poll every 60s)
-```
-
-### Fallback Flow (Network Failure)
-
-```
-1. Fetch fails (timeout, connection error, etc.)
-   ↓
-2. If fallbackToCache enabled:
-   a. Load from ~/.local/state/oclitellmac/providers/<providerKey>.json
-   b. Restore models and categories from cache
-   c. Log warning with cache timestamp
-   d. Continue with cached data
-   ↓
-3. If fallbackToCache disabled or no cache:
-   Skip this provider (log error)
-```
-
-### Budget Tracking Flow
-
-```
-1. Periodic Timer (every 60s):
-   fetchAndStore(providerKey, providerName, client)
-   ↓
-2. Chat Message Hook:
-   After each message, trigger immediate refresh
-   ↓
-3. Fetch /key/info:
-   GET {baseUrl}/key/info
-   Authorization: Bearer {apiKey}
-   ↓
-4. Store to ~/.local/state/oclitellmac/key-info/<providerKey>.json:
-   {
-     providerKey,
-     providerName,
-     fetchedAt,
-     keyInfo: { /* full /key/info response */ }
-   }
-   ↓
-5. TUI plugin reads this file and displays budget in sidebar
-```
-
-## Provider Injection
-
-The plugin injects this structure into `config.provider[providerKey]`:
-
-```typescript
-{
-  npm: "@ai-sdk/openai-compatible",      // AI SDK adapter
-  name: "My LiteLLM Gateway",            // Display name
-  key: "sk-...",                         // For TUI compatibility
-  options: {
-    baseURL: "https://gateway.com/v1",   // API endpoint
-    apiKey: "sk-...",                    // Bearer token
-    // Optional, from server.json endpoint.providerOptions:
-    // timeout, chunkTimeout, headerTimeout, setCacheKey
-  },
-  blacklist: [                           // Hide non-chat models
-    "text-embedding-ada-002",
-    "dall-e-3"
-  ],
-  models: {                              // Model configurations
-    "gpt-4": { id, name, tool_call, cost, limit, ... },
-    "claude-3-opus": { ... }
-  }
-}
-```
-
 ## Category Filtering Logic
 
 ### Detection (categorize.ts)
@@ -291,12 +206,12 @@ function categorizeModel(name: string, mode: string): Category {
   if (mode === "embedding") return "embedding"
   if (mode === "audio_speech") return "audio_speech"
   // ... other mode mappings
-  
+
   // 2. Fallback to name heuristics
   if (name.includes("embedding")) return "embedding"
   if (name.includes("tts")) return "audio_speech"
   // ... other name patterns
-  
+
   // 3. Default to chat
   return "chat"
 }
@@ -308,35 +223,23 @@ function categorizeModel(name: string, mode: string): Category {
 function buildBlacklist(
   categories: Map<string, Category>,
   enabledCategories: Set<Category>
-): string[] {
-  const result = []
-  for (const [modelId, category] of categories) {
-    if (NON_CHAT_CATEGORIES.has(category) && !enabledCategories.has(category)) {
-      result.push(modelId)
-    }
-  }
-  return result.sort() // Stable ordering
+): Array<[string, Category]> {
+  // Non-chat models whose category is not enabled,
+  // grouped by category and sorted by model ID
 }
 ```
 
 ### Configuration (index.ts)
 
 ```typescript
-const enabledCategories = new Set<Category>()
-
-if (endpoint.enableAllCategories) {
-  // Enable all non-chat categories
-  enabledCategories.add("embedding")
-  enabledCategories.add("audio_speech")
-  // ... etc.
-} else if (endpoint.enabledCategories) {
-  // Enable specific categories from config
-  endpoint.enabledCategories.forEach(cat => enabledCategories.add(cat))
-}
-// else: empty set = chat only (default)
-
-const blacklist = buildBlacklist(categories, enabledCategories)
+const enabledCategories = new Set<Category>(
+  endpoint.enableAllCategories ? ALL_NON_CHAT : endpoint.enabledCategories ?? [],
+)
+const disabled = new Set(buildBlacklist(categories, enabledCategories).map(([id]) => id))
+// A model is registered with `enabled: !disabled.has(id)`
 ```
+
+An empty set means chat only (default).
 
 ## Field Mapping Priority
 
@@ -353,6 +256,8 @@ const inputCost = getFirst(
 )
 ```
 
+LiteLLM reports cost per single token; the plugin converts to USD per million tokens, which is what OpenCode expects.
+
 ### Cache Costs
 
 Only available from `/v1/model/info`:
@@ -365,23 +270,7 @@ LiteLLM uses different field names:
 - `/v1/model/info`: `*_above_128k_tokens`
 - `/public/model_hub`: `*_above_200k_tokens`
 
-Both map to OpenCode's `cost.context_over_200k` structure.
-
-### LiteLLM Compatibility: No `litellmProxy` Workaround Needed
-
-Earlier versions of `oclitellmac` set an `options.litellmProxy: true` flag on
-every injected provider to work around an Anthropic tool-call validation
-error some LiteLLM proxy versions raised (a stub `_noop` tool injection).
-
-`oclitellmac` targets OpenCode ≥ v1.18.13, where this workaround was removed
-from OpenCode itself — the validation issue was fixed natively in LiteLLM.
-The plugin no longer sets `litellmProxy`, and it has no effect even if set
-manually.
-
-**Requirement**: run **LiteLLM ≥ v1.85.0-rc.2** for correct tool-call-history
-behavior with Anthropic models. See
-[docs/litellm-integration/field-coverage-comparison.md §1a](../../../docs/litellm-integration/field-coverage-comparison.md)
-for background and the removal commit reference.
+Both map to a second cost tier at 200,000 context tokens.
 
 ## Performance Considerations
 
@@ -389,6 +278,7 @@ for background and the removal commit reference.
 - Each endpoint adds ~1-2s to OpenCode startup (network fetch)
 - Parallel fetching (`Promise.all`) for `/public/model_hub` and `/v1/model/info`
 - Cached fallback keeps startup fast when endpoints are down
+- No model is ever prompted at startup; only GET requests are made
 
 ### Memory Usage
 - Provider cache: ~100-500KB per endpoint (depends on model count)
@@ -396,7 +286,7 @@ for background and the removal commit reference.
 - All data stored as JSON files (no in-memory DB)
 
 ### Budget Polling
-- Default: 60s interval + per-message trigger
+- Default: 60s interval + per-prompt trigger
 - Minimal overhead (~100ms HTTP request)
 - Fire-and-forget (doesn't block chat responses)
 
@@ -405,27 +295,31 @@ for background and the removal commit reference.
 ### Network Errors
 - Timeout after 30s (configurable)
 - Falls back to cached data if `fallbackToCache: true`
-- Logs detailed error messages with `input.client.app.log()`
+- Logs detailed error messages to `server.log`
 
 ### Configuration Errors
 - Zod validation catches schema violations
-- Returns empty hooks object (plugin fails gracefully)
-- User sees error in OpenCode logs
+- The plugin logs the reason and registers nothing (fails gracefully)
+- The reason is in `~/.local/state/oclitellmac/server.log`
 
 ### State File Errors
 - File locking prevents concurrent write collisions
 - Read errors fall back to empty data (logged)
 - Write errors logged but don't block execution
 
+## Testing
+
+Unit tests live in `server/test/` and run with `bun test` from the plugin directory. They cover config validation, route matching, the V2 conversion for both routes, thinking-capability mapping and the diagnostics summaries. When running live checks against a gateway, [read here](VERIFICATION.md).
+
 ## Compatibility
 
-- OpenCode v1 plugin API (stable)
-- LiteLLM proxy v1.x (tested with v1.40+)
+- OpenCode v2 plugin API (`@opencode/plugin`); the verified OpenCode version is recorded in the [source map](../../../docs/litellm-integration/source-map.md)
+- LiteLLM proxy with `/v1/model/info`; the Anthropic route also needs `POST /v1/messages`
 - Node.js 18+ (fs.promises, AbortController)
 
 ## Related Documentation
 
-- **Architecture Deep Dive**: See `ARCHITECTURE.md` for detailed pipeline documentation
-- **Implementation Details**: See `IMPLEMENTATION.md` for creation story and design decisions
-- **Testing Guide**: See `VERIFICATION.md` for comprehensive testing checklist
-- **User Guide**: See `../README.md` for installation and configuration
+- **Architecture Deep Dive**: When looking for design decisions, data flows or the registered provider shape, [read here](ARCHITECTURE.md)
+- **Implementation Details**: When looking for the creation story and design history, [read here](IMPLEMENTATION.md)
+- **Testing Guide**: When verifying the plugin end to end, [read here](VERIFICATION.md)
+- **User Guide**: When looking for installation and configuration, [read here](../README.md)

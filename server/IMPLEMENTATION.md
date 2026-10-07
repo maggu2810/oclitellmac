@@ -17,15 +17,18 @@ plugins/oclitellmac/server/
 ├── VERIFICATION.md
 ├── config-example.json          # Example configuration
 └── src/
-    ├── index.ts                 # Main plugin entry — config hook + chat.message hook
+    ├── index.ts                 # Main plugin entry — setup, provider registration, hooks
     ├── config.ts                # Zod configuration schema and loader
     ├── paths.ts                 # XDG-compliant config/state path resolution
     ├── fetch.ts                 # LiteLLM API client (model hub, model info, key info)
     ├── categorize.ts             # Model category detection (chat, embedding, TTS, etc.)
     ├── map.ts                   # Field mapping (LiteLLM → OpenCode ModelConfig)
     ├── build.ts                 # ModelConfig entry construction
-    ├── filter.ts                # Blacklist generation for non-chat models
+    ├── filter.ts                # Disabled-model selection for non-chat categories
     ├── transform.ts             # Pipeline orchestration (fetch → categorize → map → build)
+    ├── match.ts                 # Model ID glob matching (anthropicModels)
+    ├── toV2.ts                  # Model entry → V2 Model.Info, per route
+    ├── diagnostics.ts           # Request summaries for prompt-cache debugging
     ├── state.ts                 # State management with file locking
     └── budget.ts                # Budget tracking (polling + event-based)
 ```
@@ -79,7 +82,7 @@ nano ~/.config/oclitellmac/server.json
 See [CONFIGURATION.md](../docs/CONFIGURATION.md) for the full field
 reference, including optional `enabledCategories`, `enableAllCategories`,
 `providerOptions` (timeout/chunkTimeout/headerTimeout/setCacheKey), and
-`env`.
+`anthropicModels`.
 
 ### 3. Add Plugin to OpenCode
 
@@ -87,12 +90,7 @@ reference, including optional `enabledCategories`, `enableAllCategories`,
 opencode plugin add /path/to/plugins/oclitellmac
 ```
 
-Add to your `opencode.json`:
-```json
-{
-  "plugin": ["oclitellmac/server", "oclitellmac/tui"]
-}
-```
+When registering the plugin in the OpenCode configuration, [read here](../docs/INSTALL.md).
 
 ### 4. Restart OpenCode
 
@@ -100,7 +98,7 @@ The plugin will automatically:
 - ✅ Load all enabled endpoints from `~/.config/oclitellmac/server.json`
 - ✅ Fetch models from LiteLLM `/public/model_hub` and `/v1/model/info`
 - ✅ Cache results to `~/.local/state/oclitellmac/providers/`
-- ✅ Inject providers into OpenCode (no manual `opencode.json` editing needed!)
+- ✅ Register providers with OpenCode (no manual `opencode.json` editing needed!)
 - ✅ Start budget tracking (polls `/key/info` every 60 seconds)
 
 ## 🎯 Key Features Implemented
@@ -110,25 +108,33 @@ The plugin will automatically:
 - Each endpoint becomes a separate OpenCode provider
 - Enable/disable endpoints without deletion
 
-### ✅ 2. Automatic Provider Injection
-- Uses `config` hook to inject providers dynamically
+### ✅ 2. Automatic Provider Registration
+- Registers providers with `ctx.provider.transform` during plugin `setup`
 - No manual `opencode.json` editing required
-- API keys embedded directly in provider options
+- API keys set directly in the provider settings
 
 ### ✅ 3. Model Discovery & Field Mapping
 - Fetches from `/public/model_hub` (public, no auth)
 - Fetches from `/v1/model/info` (authenticated, detailed metadata)
-- Maps LiteLLM fields to OpenCode `ModelConfig` schema
+- Maps LiteLLM fields to the V2 `Model.Info` shape
   (`tool_call`, `attachment`, `reasoning`, `temperature`, `cost`, `limit`,
   `modalities`, `status`, `variants`) via the modular
   `categorize.ts` → `map.ts` → `build.ts` → `transform.ts` pipeline
 - Converts LiteLLM's per-token costs to OpenCode's per-million-token
   convention (see [CONFIGURATION.md](../docs/CONFIGURATION.md))
-- Surfaces LiteLLM's reasoning-effort support as OpenCode `variants`
+- Surfaces LiteLLM's reasoning support as OpenCode `variants` (effort levels
+  or token budgets, depending on the route)
+
+### ✅ 3a. Anthropic-Native Route for Claude
+- Models matching `anthropicModels` (default `claude-*`) use the Anthropic
+  Messages route under the same provider, so OpenCode can place prompt-cache
+  breakpoints
+- See [ARCHITECTURE.md](ARCHITECTURE.md) for the routes and
+  [CONFIGURATION.md](../docs/CONFIGURATION.md) for the field
 
 ### ✅ 4. Category Filtering
-- Non-chat models (embedding, TTS, image generation, etc.) are blacklisted
-  by default via `filter.ts`
+- Non-chat models (embedding, TTS, image generation, etc.) are registered
+  with `enabled: false` by default via `filter.ts`
 - Opt in per-category with `enabledCategories`, or all at once with
   `enableAllCategories`
 
@@ -139,7 +145,7 @@ The plugin will automatically:
 
 ### ✅ 6. Budget Tracking
 - Polls `/key/info` every 60 seconds (configurable)
-- Fetches after each chat message (redundant for cost tracking)
+- Fetches on each prompt (`prompt` session hook)
 - Stores data in `~/.local/state/oclitellmac/key-info/`
 - File locking prevents concurrent write collisions
 
@@ -149,8 +155,8 @@ The plugin will automatically:
 - Separate locks for provider cache and budget data
 
 ### ✅ 8. Comprehensive Logging
-- Logs via `input.client.app.log()` (OpenCode's structured logging)
-- Clear `[oclitellmac-server]` service tag for easy filtering
+- Logs to `~/.local/state/oclitellmac/server.log` (the plugin context has no
+  logging API)
 - Logs successes, errors, and fallback behavior
 
 ## 📊 Data Flow
@@ -162,14 +168,14 @@ The plugin will automatically:
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  oclitellmac/server plugin loads (config hook)               │
+│  oclitellmac/server plugin loads (setup)                     │
 │  1. Reads ~/.config/oclitellmac/server.json                  │
 │  2. For each enabled endpoint:                               │
 │     - Fetches /public/model_hub + /v1/model/info in parallel │
 │     - transformModels(): categorize → map → build per model  │
 │     - Caches to ~/.local/state/oclitellmac/providers/        │
 │     - buildBlacklist() for non-chat models                   │
-│     - Injects provider via config hook                       │
+│     - Registers via ctx.provider.transform                   │
 │     - Starts budget tracking                                 │
 └─────────────────────────────────────────────────────────────┘
                             │
@@ -185,7 +191,7 @@ The plugin will automatically:
 ┌─────────────────────────────────────────────────────────────┐
 │  Budget Tracking (Continuous)                                │
 │  1. Every 60 seconds: Poll /key/info for all providers       │
-│  2. After each message (chat.message hook): Fetch /key/info  │
+│  2. On each prompt (prompt hook): Fetch /key/info            │
 │  3. Store to ~/.local/state/oclitellmac/key-info/            │
 │     (with file locking)                                      │
 └─────────────────────────────────────────────────────────────┘
@@ -274,7 +280,7 @@ OpenCode/models.dev convention), not LiteLLM's raw USD-per-token value — see
 | `enabledCategories` | string[] | ❌ | Non-chat model categories to enable |
 | `enableAllCategories` | boolean | ❌ | Default: `false`. Enable all non-chat models |
 | `providerOptions` | object | ❌ | Forwarded into `options`: `timeout`, `chunkTimeout`, `headerTimeout`, `setCacheKey` |
-| `env` | string[] | ❌ | Env var names OpenCode checks for the API key (top-level, sibling of `options`) |
+| `anthropicModels` | string[] | ❌ | Default: `["claude-*"]`. Model ID patterns routed to the Anthropic-native route |
 
 ### Global Options
 
@@ -328,9 +334,10 @@ Full reference: [CONFIGURATION.md](../docs/CONFIGURATION.md)
 
 ### Design Patterns Used
 
-1. **Config Hook Injection Pattern** (from BlakeHastings plugin)
-   - Directly mutates `config.provider` object
-   - No user `opencode.json` required
+1. **Setup-Time Registration Pattern**
+   - Fetch every endpoint during `setup`, then register once with
+     `ctx.provider.transform` (the editor callback is synchronous)
+   - No user `opencode.json` provider block required
    - Clean, automatic provider registration
 
 2. **File Locking via Promise Serialization**
@@ -355,7 +362,7 @@ Full reference: [CONFIGURATION.md](../docs/CONFIGURATION.md)
 - ✅ Consistent error handling
 - ✅ Comprehensive logging
 - ✅ Type-safe configuration with `zod`
-- ✅ Modular pipeline architecture (11 source files), shared design with
+- ✅ Modular pipeline architecture (14 source files), shared design with
   `tools/config-generator` (see
   [shared-pipeline-architecture.md](../../../docs/litellm-integration/shared-pipeline-architecture.md))
 

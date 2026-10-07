@@ -106,6 +106,7 @@ Each endpoint in the `endpoints` array supports the following fields:
 | `enabled` | boolean | ❌ | Default: `true`. Whether to load this endpoint |
 | `enabledCategories` | string[] | ❌ | Non-chat model categories to enable (see [Model Category Filtering](#model-category-filtering)) |
 | `enableAllCategories` | boolean | ❌ | Default: `false`. Enable all non-chat models |
+| `anthropicModels` | string[] | ❌ | Default: `["claude-*"]`. Model ID patterns that use the Anthropic-native route (see [`anthropicModels`](#anthropicmodels-optional)) |
 
 ### Field Details
 
@@ -182,11 +183,9 @@ Default: `false` (only chat models enabled)
 
 #### `providerOptions` (optional)
 
-Forwarded verbatim into the injected provider's `options` block, alongside
-`baseURL` and `apiKey`. See OpenCode's provider config schema
-(`packages/core/src/v1/config/provider.ts` — see
-[docs/litellm-integration/source-map.md](../../../docs/litellm-integration/source-map.md)
-for the exact commit) for full field semantics.
+Timeout fields are forwarded into the provider's `settings`, alongside
+`baseURL` and `apiKey`. Timeouts are in milliseconds. `setCacheKey` is applied
+to each OpenAI-compatible model as `compatibility.supportsPromptCacheKey`.
 
 ```json
 "providerOptions": {
@@ -202,21 +201,32 @@ for the exact commit) for full field semantics.
 | `timeout` | number \| `false` | Request timeout in milliseconds. `false` disables it. |
 | `chunkTimeout` | number | Timeout in milliseconds between streamed SSE chunks. |
 | `headerTimeout` | number \| `false` | Timeout in milliseconds to wait for response headers. `false` disables it. |
-| `setCacheKey` | boolean | Ensure a cache key is always set for this provider. |
+| `setCacheKey` | boolean | Send OpenAI's `prompt_cache_key` on OpenAI-compatible models. It has no effect on Anthropic prompt caching, and is ignored for models on the Anthropic route. |
 
 All fields are optional and omitted from the generated provider config when
 not set.
 
-#### `env` (optional)
+#### `anthropicModels` (optional)
 
-Env var names OpenCode checks for the API key. This is a top-level provider
-field (sibling of `options`), not nested inside `providerOptions`. Since the
-plugin already injects `apiKey` directly, this is rarely needed — mainly
-useful as a fallback for tooling that reads env vars directly.
+Glob patterns (`*` wildcard, case-insensitive) matched against model IDs.
+Matching models use OpenCode's Anthropic-native Messages route (`/v1/messages`)
+instead of the OpenAI-compatible chat route. They stay under the same provider,
+with the same `apiKey` and `baseURL`, so the model picker and budget display do
+not change.
+
+Of the two routes, only the Anthropic route sends `cache_control` breakpoints, so
+Claude models need it for prompt caching. Reasoning variants are built from the flags LiteLLM
+reports in `/v1/model/info`: adaptive models get effort levels, other reasoning
+models get token-budget variants.
 
 ```json
-"env": ["LITELLM_API_KEY"]
+"anthropicModels": ["claude-*"]
 ```
+
+The default is `["claude-*"]`, which also covers aliases such as
+`claude-sonnet-latest`. Use `[]` to keep every model on the OpenAI-compatible
+route. The gateway must expose `POST <baseUrl>/v1/messages`; check that
+before relying on the default.
 
 ## Global Options Reference
 
@@ -227,6 +237,7 @@ The optional `options` object configures global plugin behavior:
 | `timeout` | number | `30` | HTTP request timeout in seconds |
 | `budgetPollInterval` | number | `60` | How often to poll `/key/info` in seconds |
 | `fallbackToCache` | boolean | `true` | Use cached data if endpoint unreachable |
+| `cachePrefixDiagnostics` | boolean | `false` | Log request counts and hashes to `server.log` to diagnose prompt-cache misses |
 
 ### Configuration Example
 
@@ -242,6 +253,14 @@ The optional `options` object configures global plugin behavior:
 ```
 
 ### Option Details
+
+#### `cachePrefixDiagnostics`
+
+When `true`, each primary model request appends one JSON line to
+`~/.local/state/oclitellmac/server.log` with only counts and hashes (breakpoint
+count, system and tool counts, tool-schema hash, stable-prefix hash, options
+hash, and the index of the first block that changed since the previous request
+in the same session). It never logs prompt, tool or file content.
 
 #### `timeout`
 

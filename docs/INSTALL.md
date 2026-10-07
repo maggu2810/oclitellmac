@@ -7,68 +7,38 @@ This guide walks you through installing and verifying the oclitellmac plugin.
 
 ## Quick Start
 
-### npm Package Installation (Recommended)
+Both install routes need a build made for OpenCode v2. For package and Git specifiers, plugin spec formats, and config file rules, [read here](opencode-plugin-cli.md) when you need CLI details.
 
-Install from npm registry:
+### 1. Register the Plugin
+
+#### From a package (needs a v2 release)
+
+The `oclitellmac@0.4.0` npm release is a V1 build and does not load in OpenCode v2. A v2 install needs a release built for OpenCode v2 (0.6.0 or later).
 
 ```bash
-# Global installation (available in all projects)
-opencode plugin oclitellmac --global
-
-# Project-local installation
-opencode plugin oclitellmac
+opencode plugin add oclitellmac
 ```
 
-OpenCode automatically:
-- Downloads the package from npm
-- Installs dependencies
-- Registers both entry points (server + TUI)
+This installs the package and writes it to the global config. Skip to step 2.
 
-Skip to step 2 (Configure Server Plugin) below.
-
-### Local Development
-
-For development or testing local changes:
+#### From a local checkout (development)
 
 ```bash
-# Clone repository
 git clone https://github.com/maggu2810/oclitellmac.git
 cd oclitellmac
-
-# Install dependencies
 bun install
-
-# Register with OpenCode
-opencode plugin .
+bun run build
 ```
 
-### 1. Configure OpenCode (Local Path Only)
-
-**Note**: `opencode plugin .` does this automatically. Manual editing is only needed as a fallback.
-
-For **local config**, edit `.opencode/opencode.json` (or `.opencode/opencode.jsonc`) and `.opencode/tui.json` (or `.opencode/tui.jsonc`) separately:
-
-`.opencode/opencode.json`:
-```json
-{
-  "plugin": ["./oclitellmac"]
-}
-```
-
-`.opencode/tui.json`:
-```json
-{
-  "plugin": ["./oclitellmac"]
-}
-```
-
-For **global config**, use absolute paths in `~/.config/opencode/opencode.json` (or `.jsonc`) and `~/.config/opencode/tui.json` (or `.jsonc`):
+`opencode plugin add` rejects local paths. Instead, add the absolute path of the `dist/` directory to the server config `~/.config/opencode/opencode.jsonc`:
 
 ```json
 {
-  "plugin": ["/absolute/path/to/oclitellmac"]
+  "plugin": ["/absolute/path/to/oclitellmac/dist"]
 }
 ```
+
+OpenCode resolves `<path>/server` and `<path>/tui` on the filesystem, so a path to the project root does not load. The TUI entry is loaded automatically from the same entry; do not add it to `cli.json`. `tui.json` is no longer read.
 
 ### 2. Configure Server Plugin
 
@@ -102,7 +72,7 @@ Create `~/.config/oclitellmac/server.json` with your LiteLLM endpoint(s):
 ### Server Plugin
 - Loads on OpenCode startup
 - Fetches model lists from LiteLLM endpoints
-- Injects providers into OpenCode configuration
+- Registers providers with OpenCode
 - Starts budget tracking (polls every 60s)
 - Writes data to state directory (see Platform-Specific Paths below)
 
@@ -149,12 +119,10 @@ export XDG_STATE_HOME="$HOME/my-state"
 ### 1. Check Plugin Loading
 
 ```bash
-# Check OpenCode logs for plugin loading messages
-# Should see:
-# - "Loaded configuration from ..."
-# - "Fetching models for ..."
-# - "Provider injection complete: ..."
-# - "Started budget tracking for ..."
+opencode plugin list
+
+# Server plugin log (the server plugin context has no logging API)
+tail -n 50 ~/.local/state/oclitellmac/server.log
 ```
 
 ### 2. Verify Provider Injection
@@ -225,7 +193,7 @@ In OpenCode TUI sidebar, look for:
 For common issues and solutions, see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
 
 Quick diagnostics:
-- **Server plugin not loading** → Check config file exists and is valid JSON
+- **Server plugin not loading** → Check the plugin is listed in `opencode.jsonc` and the config file is valid JSON
 - **TUI shows "Waiting for server..."** → Verify budget files exist in state directory
 - **Models not appearing** → Check endpoint is enabled and category filtering settings
 - **Budget not updating** → Verify `/key/info` endpoint is accessible

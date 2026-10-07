@@ -10,19 +10,22 @@
 - [x] `VERIFICATION.md` - This checklist
 - [x] `config-example.json` - Example configuration file
 - [x] `.gitignore` - Git ignore rules
-- [x] `src/index.ts` - Main plugin entry point (`config` + `chat.message` hooks)
+- [x] `src/index.ts` - Main plugin entry point (`setup`, provider registration, hooks)
 - [x] `src/config.ts` - Zod configuration schema and loader
 - [x] `src/paths.ts` - XDG-compliant config/state path resolution
 - [x] `src/fetch.ts` - LiteLLM API client (`/public/model_hub`, `/v1/model/info`, `/key/info`)
 - [x] `src/categorize.ts` - Model category detection (chat, embedding, TTS, etc.)
 - [x] `src/map.ts` - Field mapping (LiteLLM → OpenCode `ModelConfig`)
 - [x] `src/build.ts` - `ModelConfig` entry construction
-- [x] `src/filter.ts` - Blacklist generation for non-chat models
+- [x] `src/filter.ts` - Disabled-model selection for non-chat categories
 - [x] `src/transform.ts` - Pipeline orchestration (fetch → categorize → map → build)
 - [x] `src/state.ts` - State management with file locking
 - [x] `src/budget.ts` - Budget tracking logic (polling + event-based)
+- [x] `src/match.ts` - Model ID glob matching for `anthropicModels`
+- [x] `src/toV2.ts` - Model entry → V2 `Model.Info`, per route
+- [x] `src/diagnostics.ts` - Request summaries for prompt-cache debugging
 
-**Total:** 11 source files, see [IMPLEMENTATION.md](IMPLEMENTATION.md) for
+**Total:** 14 source files, see [IMPLEMENTATION.md](IMPLEMENTATION.md) for
 the full file structure.
 
 ## 🎯 Features Implemented
@@ -33,8 +36,9 @@ the full file structure.
 - [x] Fetch models from `/public/model_hub` (no auth)
 - [x] Fetch detailed model info from `/v1/model/info` (with auth)
 - [x] Build OpenCode-compatible model configs
-- [x] Inject providers via `config` hook
-- [x] Embed API keys in provider options (no auth.json needed)
+- [x] Register providers via `ctx.provider.transform`
+- [x] Route Claude models to the Anthropic-native route (`anthropicModels`)
+- [x] Set API keys in provider settings (no auth.json needed)
 
 ### Caching & Fallback
 - [x] Cache provider data to `~/.local/state/oclitellmac/providers/`
@@ -44,7 +48,7 @@ the full file structure.
 
 ### Budget Tracking
 - [x] Poll `/key/info` periodically (every 60s by default)
-- [x] Fetch budget after each chat message
+- [x] Fetch budget on each prompt
 - [x] Store budget data to `~/.local/state/oclitellmac/key-info/`
 - [x] File locking to prevent concurrent write collisions
 - [x] Configurable `budgetPollInterval`
@@ -52,7 +56,7 @@ the full file structure.
 ### Robustness
 - [x] File locking via Promise serialization
 - [x] Comprehensive error handling
-- [x] Clear logging with `[oclitellmac-server]` prefix
+- [x] Clear logging to `~/.local/state/oclitellmac/server.log`
 - [x] Graceful degradation when endpoints fail
 - [x] Enable/disable individual endpoints
 - [x] Configurable timeouts
@@ -79,17 +83,7 @@ the full file structure.
    # Edit with your LiteLLM endpoints
    ```
 
-3. **Add to OpenCode:**
-   ```bash
-   opencode plugin add /path/to/plugins/oclitellmac
-   ```
-   
-   Add to `opencode.json`:
-   ```json
-   {
-     "plugin": ["oclitellmac/server", "oclitellmac/tui"]
-   }
-   ```
+3. **Add to OpenCode:** when registering the plugin, [read here](../docs/INSTALL.md)
 
 4. **Restart OpenCode**
 
@@ -103,7 +97,7 @@ the full file structure.
 
 ### Basic Functionality Tests
 - [ ] OpenCode starts without errors
-- [ ] Look for `[oclitellmac-server] Loaded configuration` in logs
+- [ ] `~/.local/state/oclitellmac/server.log` shows the fetch and registration lines (see Expected Log Output)
 - [ ] Providers appear in OpenCode model picker
 - [ ] Models are selectable
 - [ ] Can send chat messages using LiteLLM models
@@ -120,8 +114,8 @@ the full file structure.
 - [ ] Check for "Using cached data" log message
 
 ### Budget Tracking Tests
-- [ ] Send a chat message
-- [ ] Check budget file is updated after message
+- [ ] Send a prompt
+- [ ] Check budget file is updated after the prompt
 - [ ] Wait 60 seconds
 - [ ] Check budget file is updated again
 - [ ] Verify `fetchedAt` timestamp updates
@@ -139,7 +133,24 @@ the full file structure.
       LiteLLM's own `x-litellm-response-cost` header (within rounding)
 - [ ] Pick a model with `supports_<level>_reasoning_effort` flags in
       `/v1/model/info` and confirm `models.<id>.variants` lists each
-      supported level as `{ "<level>": { "reasoningEffort": "<level>" } }`
+      supported level as `{ id: "<level>", settings: { reasoningEffort: "<level>" } }`
+      (OpenAI-compatible route)
+
+### Anthropic Route Tests
+
+- [ ] `server.log` shows `<providerKey>: N/M models use the Anthropic route` with
+      N equal to the number of `claude-*` models
+- [ ] A Claude model answers a prompt, including a tool call
+- [ ] Adaptive Claude models list `low`, `medium` and `high`, plus `xhigh` and
+      `max` where LiteLLM reports them; budget-only models list `high` and `max`
+- [ ] Non-Claude models stay on the OpenAI-compatible route and still answer
+- [ ] With `options.cachePrefixDiagnostics: true`, each primary request adds a
+      JSON line with `cache_control_present: true`; across consecutive steps
+      `stable_prefix_hash` stays unchanged and `first_divergence_index` is
+      `null` or points at the conversation tail
+- [ ] Directly against the gateway, two identical requests with a large stable
+      prefix and `cache_control`: the second reports a large
+      `cache_read_input_tokens`
 
 ### Error Handling Tests
 - [ ] Invalid JSON in config file - check error message
@@ -150,13 +161,12 @@ the full file structure.
 ## 📊 Expected Log Output
 
 ```
-[oclitellmac-server] Loaded configuration from /home/user/.config/oclitellmac/server.json
-[oclitellmac-server] Config hook: Injecting providers...
-[oclitellmac-server] Fetching models for my-litellm from https://litellm.example.com...
-[oclitellmac-server] Loaded 15 models for my-litellm
-[oclitellmac-server] Started budget tracking for my-litellm (interval: 60s)
-[oclitellmac-server] Provider injection complete: 1 fresh, 0 cached, 0 failed
-[oclitellmac-server] Budget data updated for my-litellm
+<timestamp> Fetching models for my-litellm from https://litellm.example.com...
+<timestamp> Loaded 15 models for my-litellm
+<timestamp> Started budget tracking for my-litellm (interval: 60s)
+<timestamp> Provider injection complete: 1/1 endpoints
+<timestamp> my-litellm: 4/15 models use the Anthropic route
+<timestamp> Budget data updated for my-litellm
 ```
 
 ## 🚨 Common Issues & Solutions
@@ -171,7 +181,7 @@ the full file structure.
 **Solution:** 
 - Check endpoint URL is correct
 - Verify API key is valid
-- Check OpenCode logs for error messages
+- Check `~/.local/state/oclitellmac/server.log` for error messages
 
 ### Issue: Budget data not updating
 **Solution:**
@@ -186,9 +196,10 @@ The plugin is working correctly if:
 3. ✅ Models are selectable in the model picker
 4. ✅ Chat messages work with LiteLLM models
 5. ✅ State directory and files are created
-6. ✅ Budget data updates periodically and after messages
+6. ✅ Budget data updates periodically and after prompts
 7. ✅ Fallback to cache works when endpoint is unreachable
-8. ✅ Clear log messages with `[oclitellmac-server]` prefix
+8. ✅ Claude models use the Anthropic route and non-Claude models the OpenAI-compatible route
+9. ✅ Clear log messages in `~/.local/state/oclitellmac/server.log`
 
 ## 🎉 Next Steps
 

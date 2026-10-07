@@ -12,7 +12,8 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 
 - **Config**: `~/.config/oclitellmac/server.json` (XDG-compliant, see docs/PATH-STRATEGY.md)
 - **State**: `~/.local/state/oclitellmac/` (providers cache, budget data)
-- **Installation**: `opencode plugin oclitellmac` (global: `--global` flag) or `opencode plugin <path>` (local development)
+- **Target**: OpenCode v2 (`@opencode/plugin`, `setup(ctx)` module shape)
+- **Installation**: When registering the plugin or debugging load errors, read [docs/opencode-plugin-cli.md](docs/opencode-plugin-cli.md)
 
 ## Features
 
@@ -24,6 +25,7 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 - Cross-platform XDG path support (Linux/macOS/Windows)
 - Reasoning-effort variants surfaced from LiteLLM's `/v1/model/info`
 - Optional provider-level options (timeout, chunkTimeout, headerTimeout, setCacheKey)
+- Claude models use the Anthropic-native route by default (`anthropicModels`); for config, [read here](docs/CONFIGURATION.md); for design, [read here](server/ARCHITECTURE.md)
 
 ## File Reading Instructions
 
@@ -38,7 +40,7 @@ Read @docs/docu-handling.md
 When working on code or understanding import conventions and development setup:
 Read @docs/DEVELOPMENT.md
 
-When understanding OpenCode plugin CLI commands and spec formats:
+When registering the plugin or understanding OpenCode plugin CLI commands, spec formats and config files:
 Read @docs/opencode-plugin-cli.md
 
 When understanding path management (XDG compliance, cross-platform):

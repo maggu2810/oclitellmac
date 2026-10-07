@@ -17,6 +17,7 @@ The plugin combines server and TUI functionality: the server plugin fetches mode
 - 📊 **Model discovery** - Fetches models from LiteLLM `/public/model_hub` and `/v1/model/info`
 - 🎯 **Smart model filtering** - Blacklists non-chat models by default
 - 💾 **Smart caching** - Falls back to cached data if endpoints are unreachable
+- 🤖 **Anthropic-native route** - Claude models use the Anthropic route by default (`anthropicModels`)
 - 💰 **Budget tracking** - Monitors usage via `/key/info` endpoint
 
 ### TUI Plugin
@@ -61,22 +62,18 @@ Budget usage is color-coded for quick visual status:
 
 ## Requirements
 
-- OpenCode with plugin support
+- OpenCode v2
 - LiteLLM proxy endpoint(s)
 
 ## Installation
 
-Install the plugin from npm:
+Requires OpenCode v2 and a plugin release built for it (0.6.0 or later; the 0.4.0 release is a V1 build). Install from npm:
 
 ```bash
-# Global installation (available in all projects)
-opencode plugin oclitellmac --global
-
-# Project-local installation
-opencode plugin oclitellmac
+opencode plugin add oclitellmac
 ```
 
-After installation, configure the server plugin (see Configuration section below) and restart OpenCode.
+This registers the plugin in the global OpenCode config (`~/.config/opencode/opencode.jsonc`); the TUI entry is loaded automatically. After installation, configure the server plugin (see Configuration section below) and restart OpenCode.
 
 ## Configuration
 
@@ -167,7 +164,7 @@ On Linux, you can override the default path using the `XDG_STATE_HOME` environme
 
 ## Troubleshooting
 
-See the `docs/TROUBLESHOOTING.md` file in the [project repository](https://github.com/maggu2810/oclitellmac) for common issues and solutions.
+Logs are written to `~/.local/state/oclitellmac/server.log`. See the `docs/TROUBLESHOOTING.md` file in the [project repository](https://github.com/maggu2810/oclitellmac) for common issues and solutions.
 
 ## Further Documentation
 

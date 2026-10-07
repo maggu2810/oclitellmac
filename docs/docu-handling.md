@@ -42,28 +42,28 @@ When significant features are added or configuration changes, the root `README.m
    - **Source**: First paragraph of `docs/README.md` or `docs/INSTALL.md` overview
 
 3. **Features** (two bullet lists)
-   - Server plugin features (7–8 bullets)
+   - Server plugin features (7–9 bullets, including the Anthropic-native route for Claude models)
    - TUI plugin features (6–7 bullets)
    - **Keep emojis** — they render correctly on npmjs.com
-   - **Source**: Current root `README.md` Features section (lines 31–46)
+   - **Source**: Current root `README.md` Features section
 
 4. **TUI Display** (visual preview)
    - ASCII art provider card example
    - Color coding explanation (green/yellow/red with usage thresholds)
    - Timestamp display format
    - **Why keep**: Helps users visualize the plugin before installing
-   - **Source**: Current root `README.md` TUI Display section (lines 113–143)
+   - **Source**: Current root `README.md` TUI Display section
 
 5. **Requirements**
-   - OpenCode with plugin support
+   - OpenCode v2
    - LiteLLM proxy endpoint(s)
    - **Exclude**: Node.js version (dev-only requirement, not relevant for npm users)
-   - **Source**: Current root `README.md` Requirements section (lines 244–248)
+   - **Source**: Current root `README.md` Requirements section
 
 6. **Installation**
-   - **Only npm install**: `opencode plugin oclitellmac`
-   - Mention `--global` flag for global installation
-   - **Exclude**: GitHub install (blocked by OpenCode bug), local development (belongs in `docs/DEVELOPMENT.md`)
+   - **Only npm install**: `opencode plugin add oclitellmac` (writes the global config)
+   - State that a release built for OpenCode v2 is required
+   - **Exclude**: GitHub install, local `dist/` registration (belongs in `docs/INSTALL.md`; CLI rules in `docs/opencode-plugin-cli.md`)
    - **Source**: New content, not from existing files
 
 7. **Configuration** (inline examples)
@@ -80,13 +80,13 @@ When significant features are added or configuration changes, the root `README.m
      }
      ```
      - **Must include `providerName`** with a note explaining it's optional but controls the TUI display name (vs. auto-formatted from `providerKey`)
-     - **Source**: `docs/CONFIGURATION.md` Quick Start Configuration (lines 77–87), enhanced with `providerName`
+     - **Source**: `docs/CONFIGURATION.md` Quick Start Configuration, enhanced with `providerName`
    
    - **Full Example** (multiple endpoints + options):
      - Show 2–3 endpoints with different settings
      - Include all `options` fields (`timeout`, `budgetPollInterval`, `fallbackToCache`)
      - Include category filtering examples (`enabledCategories`, `enableAllCategories`)
-     - **Source**: `docs/CONFIGURATION.md` Multiple Endpoints Example (lines 347–380)
+     - **Source**: `docs/CONFIGURATION.md` Multiple Endpoints Example
 
 8. **Troubleshooting** (one sentence, textual reference)
    - Example: "See the `docs/TROUBLESHOOTING.md` file in the [project repository](https://github.com/maggu2810/oclitellmac) for common issues and solutions."
@@ -114,12 +114,12 @@ When significant features are added or configuration changes, the root `README.m
 When regenerating, draw content from:
 
 1. **`docs/CONFIGURATION.md`**:
-   - Minimal configuration example (lines 77–87, add `providerName`)
-   - Full configuration example (lines 347–380)
+   - Minimal configuration example (add `providerName`)
+   - Full configuration example
 
 2. **Current root `README.md`**:
-   - Features section (lines 31–46) — copy as-is
-   - TUI Display section (lines 113–143) — copy as-is
+   - Features section — copy as-is
+   - TUI Display section — copy as-is
 
 3. **`docs/TROUBLESHOOTING.md`**:
    - Referenced textually (one sentence in Troubleshooting section)
@@ -172,6 +172,11 @@ When regenerating, draw content from:
 | `docs/TROUBLESHOOTING.md` | `docs/` | Common issues and solutions |
 | `docs/PATH-STRATEGY.md` | `docs/` | XDG path management rationale |
 | `docs/DEVELOPMENT.md` | `docs/` | Development guide |
+| `docs/PUBLISH.md` | `docs/` | npm publishing guide |
+| `docs/opencode-plugin-cli.md` | `docs/` | OpenCode v2 plugin CLI, spec formats, config files |
+| `docs/KNOWN-ISSUES.md` | `docs/` | Open issues and pending validation |
+| `docs/docu-handling.md` | `docs/` | This guide |
+| `docs/agents-file-conventions.md` | `docs/` | AGENTS.md conventions |
 | `server/README.md` | `server/` | Server plugin technical details |
 | `server/ARCHITECTURE.md` | `server/` | Server pipeline architecture |
 | `server/IMPLEMENTATION.md` | `server/` | Server implementation summary |

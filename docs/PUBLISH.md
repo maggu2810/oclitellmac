@@ -2,6 +2,8 @@
 
 This guide covers the steps to publish the oclitellmac plugin to the npm registry.
 
+Publish only builds made for OpenCode v2 (version 0.6.0 or later). The `0.4.0` release on npm is a V1 build that does not load in OpenCode v2. For how users install a published package, [read here](opencode-plugin-cli.md) when you need CLI or spec details.
+
 This plugin uses `bun` for building and publishing (matches the tracked `bun.lock`
 lockfile and the OpenCode project's own package manager). `npm` is only used for
 the one-time login step below — `bun` has no independent login flow and reads the
@@ -117,7 +119,7 @@ Tag: latest
 Access: public
 Registry: https://registry.npmjs.org/
 
- + oclitellmac@0.4.0
+ + oclitellmac@<version>
 ```
 
 ### Step 4: Verify Publication

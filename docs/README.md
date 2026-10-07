@@ -5,7 +5,7 @@ This directory contains comprehensive documentation for the oclitellmac plugin.
 ## User Guides
 
 ### [INSTALL.md](INSTALL.md)
-Step-by-step installation guide for local development and testing. Covers plugin registration, configuration file setup, verification steps, and platform-specific paths.
+Step-by-step installation guide (package and local `dist/` registration) and verification. Covers plugin registration, configuration file setup, verification steps, and platform-specific paths.
 
 ### [CONFIGURATION.md](CONFIGURATION.md)
 Complete configuration reference for the server plugin. Includes endpoint configuration, global options, model category filtering, and advanced configuration examples.
@@ -25,6 +25,9 @@ Development guide covering build process, dependency management, import conventi
 
 ### [PUBLISH.md](PUBLISH.md)
 Step-by-step guide for publishing the plugin to npm registry, including versioning, building, verification, and troubleshooting.
+
+### [Known Issues](KNOWN-ISSUES.md)
+Open problems, pending validation steps and possible fixes.
 
 ### Server Plugin Technical Documentation
 
@@ -46,4 +49,4 @@ Instructions for regenerating the root README.md for npm publication. Defines wh
 Conventions for AGENTS.md files and cost optimization strategies when working with AI assistants.
 
 ### [opencode-plugin-cli.md](opencode-plugin-cli.md)
-OpenCode plugin CLI commands and specification format reference.
+Canonical reference for the OpenCode v2 plugin CLI, spec formats, config files (`opencode.jsonc`, `cli.json`) and local-path rules.

@@ -1,223 +1,95 @@
 # OpenCode Plugin CLI Reference
 
-Source-verified reference for the OpenCode plugin installation command.
+Source-verified reference for plugin registration in OpenCode v2: CLI commands,
+spec formats, config files, and local-path rules. Other docs link here instead
+of restating it.
 
-## Command Syntax
-
-```bash
-opencode plugin <module> [--global|-g] [--force|-f]
-opencode plug   <module> [-g] [-f]           # alias
-```
-
-**There is no `add` subcommand.** The command is `opencode plugin <module>`, not `opencode plugin add <module>`.
-
-### Arguments
-
-| Argument | Type | Required | Description |
-|---|---|---|---|
-| `<module>` | string | yes | Plugin specifier (npm package, GitHub URL, local path) |
-
-### Flags
-
-| Flag | Alias | Type | Default | Description |
-|---|---|---|---|---|
-| `--global` | `-g` | boolean | `false` | Install into global config (`~/.config/opencode/`) instead of local `.opencode/` |
-| `--force` | `-f` | boolean | `false` | Replace existing plugin entry in config (overwrite, not skip) |
-
----
-
-## Supported Plugin Specifiers
-
-The `<module>` argument accepts any format that `npm-package-arg` recognizes:
-
-| Format | Example | Description |
-|---|---|---|
-| **npm package** | `my-plugin` | Install from npm registry (appends `@latest` automatically) |
-| **npm + version** | `my-plugin@1.2.3` | Install specific version from npm |
-| **npm + tag** | `my-plugin@beta` | Install specific dist-tag from npm |
-| **GitHub shortcut** | `github:user/repo` | Clone from GitHub (HEAD) |
-| **GitHub + tag** | `github:user/repo#v1.0.0` | Clone from GitHub at specific tag/commit |
-| **GitHub + semver** | `github:user/repo#semver:^1.0.0` | Clone from GitHub matching semver range |
-| **Full git URL** | `https://github.com/user/repo.git` | Clone from any git URL |
-| **Local relative path** | `./path/to/plugin` | Use local directory (development) |
-| **Local absolute path** | `/home/user/plugin` | Use local directory (development) |
-| **file:// URL** | `file:///home/user/plugin` | Use local directory via file URL |
-
----
-
-## What the Command Does
-
-### Phase 1: Install Plugin Package
-
-**Spinner:** "Installing plugin package…"
-
-1. Parses the `<module>` spec using `npm-package-arg`
-2. For **GitHub specs** (`github:user/repo#tag`):
-   - Calls `@npmcli/arborist` to clone the repo
-   - Installs dependencies
-   - Places package under: `~/.opencode/cache/packages/<sanitized-spec>/node_modules/<package-name>/`
-3. For **npm specs**:
-   - Downloads from npm registry
-   - Same cache location
-4. For **local paths** (`./plugin`, `/path/to/plugin`):
-   - Uses the path directly (no copy, no cache)
-
-**Spinner result:** "Plugin package ready"
-
-### Phase 2: Read Plugin Manifest
-
-**Spinner:** "Reading plugin manifest…"
-
-1. Reads `package.json` from the installed/resolved directory
-2. Detects plugin entry points by checking:
-   - `exports["./server"]` → server plugin
-   - `exports["./tui"]` → TUI plugin
-   - `main` field → fallback server plugin
-   - `oc-themes` field → theme-only TUI plugin
-3. Validates that at least one entry point exists
-
-**Spinner result:** "Detected server" / "Detected tui" / "Detected server + tui"
-
-### Phase 3: Update Config Files
-
-**Spinner:** "Updating plugin config…"
-
-1. **Determines config directory:**
-   - If `--global`: `~/.config/opencode/`
-   - If local + git worktree: `<worktree>/.opencode/`
-   - Otherwise: `<cwd>/.opencode/`
-
-2. **For each detected plugin type:**
-   - **Server plugin** → updates `opencode.jsonc` (or `.json`, `.json5`)
-   - **TUI plugin** → updates `tui.jsonc` (or `.json`, `.json5`)
-
-3. **Updates the `plugin` array:**
-   - If spec already exists and `--force` not set: skips (reports "Already configured")
-   - If `--force` set: replaces existing entry
-   - Otherwise: appends new entry
-
-4. **Preserves formatting:**
-   - Uses `jsonc-parser` to maintain comments, trailing commas, indentation
-
-**Spinner result:** "Plugin config updated"
-
-### Phase 4: Summary
-
-```
-✓  Installed github:maggu2810/oclitellmac
-   Scope: local (/your/project/.opencode)
-```
-
-Or with `--global`:
-```
-   Scope: global (/home/user/.config/opencode)
-```
-
----
-
-## Examples
-
-### Basic GitHub Install
+## Commands
 
 ```bash
-# Install from GitHub HEAD (latest)
-opencode plugin github:maggu2810/oclitellmac
-
-# Install from GitHub at specific tag
-opencode plugin github:maggu2810/oclitellmac#v1.0.0
-
-# Install from GitHub at specific commit
-opencode plugin github:maggu2810/oclitellmac#a1b2c3d
+opencode plugin list [--builtin]
+opencode plugin add <package>
+opencode plugin check [target]
+opencode plugin update [target]
+opencode plugin remove <package>
 ```
 
-### Global Install
+There is no `--global`, `--force`, `-g` or `-f` flag and no bare
+`opencode plugin <module>` form. Run `opencode plugin --help` for the current list.
+
+### `add`
+
+- Accepts only an npm registry or Git package specifier. Local paths are
+  rejected with "Plugin target must be an npm registry package or Git package
+  specifier".
+- Installs the package via npm (arborist/pacote).
+- Always writes the global config: a package with a server entrypoint is added to
+  the `plugins` array of the global opencode config; a TUI-only package is added
+  to the `plugins` array of `cli.json`.
+
+### Package specifier examples
 
 ```bash
-# Install globally (available in all projects)
-opencode plugin github:maggu2810/oclitellmac --global
-opencode plugin github:maggu2810/oclitellmac -g
+opencode plugin add oclitellmac
+opencode plugin add github:your-org/your-repo
+opencode plugin add "github:your-org/your-repo#path:packages/my-plugin"
 ```
 
-### Force Replace
+Package plugins need a release built for OpenCode v2. The `oclitellmac@0.4.0`
+npm release is a V1 build; use 0.6.0 or later.
 
-```bash
-# Replace existing plugin entry (e.g., upgrade to new version)
-opencode plugin github:maggu2810/oclitellmac#v2.0.0 --force
-opencode plugin github:maggu2810/oclitellmac#v2.0.0 -f
-```
+## Config Files
 
-### Local Development
+| File | Used for |
+|---|---|
+| `~/.config/opencode/opencode.jsonc` | Server config. Plugins are listed once under `plugin` (legacy name, still accepted) or `plugins` |
+| `~/.config/opencode/cli.json` | V2 TUI/CLI config (key `plugins`) |
 
-```bash
-# Install from current directory
-cd /path/to/my-plugin
-opencode plugin .
+- A server plugin that also has a TUI entry is loaded in the TUI automatically
+  (server inventory `features.tui`). Listing it once in the server config is enough.
+- `cli.json` `plugins` is only needed for TUI-only plugins, per-plugin options,
+  or disabling a plugin (entries starting with `-`).
+- `tui.json` / `tui.jsonc` are not read by V2. They are imported into `cli.json`
+  once, only when `cli.json` does not exist yet (same for
+  `~/.local/state/opencode/kv.json`).
 
-# Install from relative path
-opencode plugin ./plugins/my-plugin
+## Entry Resolution
 
-# Install from absolute path
-opencode plugin /home/user/dev/my-plugin
-```
+For npm and Git packages, entries come from the `exports` map of `package.json`:
+`./server` (falling back to `.`), `./tui`, `./rpc`.
 
-### npm Registry
+For a local path in config:
 
-```bash
-# Install from npm (latest)
-opencode plugin my-opencode-plugin
+- The path must be a directory. A file path is rejected with "configured plugin
+  path must be a directory".
+- Relative paths (`./`, `../`) resolve against the directory of the config file;
+  `file://` URLs are accepted.
+- V2 resolves `<dir>/server` (then `<dir>/index`) and `<dir>/tui` on the
+  filesystem, like a bundler (for example `server.js`, `tui.js`).
+  `package.json` `exports` is not consulted.
+- oclitellmac builds to `dist/server.js` and `dist/tui.js` (`bun run build`), so
+  register the absolute path of the `dist/` directory, not the project root.
 
-# Install specific version
-opencode plugin my-opencode-plugin@1.2.3
+Example:
 
-# Install specific tag
-opencode plugin my-opencode-plugin@beta
-```
-
-### Using the Alias
-
-```bash
-# All commands work with "plug" alias
-opencode plug github:maggu2810/oclitellmac -g -f
-```
-
----
-
-## Config File Results
-
-After running `opencode plugin github:maggu2810/oclitellmac`, your config files will contain:
-
-### `.opencode/opencode.jsonc` (or global equivalent)
-
-```jsonc
+```json
 {
-  "plugin": [
-    "github:maggu2810/oclitellmac"  // if server plugin detected
-  ]
+  "plugin": ["/abs/path/to/oclitellmac/dist"]
 }
 ```
 
-### `.opencode/tui.jsonc` (or global equivalent)
+## Plugin Module Shapes
 
-```jsonc
-{
-  "plugin": [
-    "github:maggu2810/oclitellmac"  // if TUI plugin detected
-  ]
-}
-```
+| Entry | Required default export |
+|---|---|
+| Server | `{ id, setup(ctx) }` or `{ id, effect }` (`@opencode/plugin`) |
+| TUI | `{ id, setup(ctx) }` (`Plugin.Definition` from `@opencode/plugin/tui`) |
 
-**Note:** For plugins with both server and TUI entry points (like oclitellmac), the spec is added to **both** config files.
+V1 shapes (`export default async function(input): Hooks`, `{ id, tui }`) fail to
+load; see [Troubleshooting](TROUBLESHOOTING.md) for the exact errors.
 
----
+## Further Reading
 
-## Source References
+When installing oclitellmac, [read here](INSTALL.md)
 
-This document was verified by inspecting the OpenCode source code at:
-
-- **CLI command definition**: `packages/opencode/src/cli/cmd/plug.ts` (lines 178–199)
-- **Plugin installation flow**: `packages/opencode/src/plugin/install.ts` (lines 259–421)
-- **Entry point resolution**: `packages/opencode/src/plugin/shared.ts` (lines 54, 103–213)
-- **npm package installation**: `packages/core/src/npm.ts` (line 113)
-- **Config file patching**: `packages/opencode/src/plugin/install.ts` (lines 333–421)
-
-Verified against the OpenCode repository (branch: `dev`)
+When a plugin fails to load, [read here](TROUBLESHOOTING.md)
