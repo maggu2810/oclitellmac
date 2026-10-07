@@ -4,6 +4,9 @@ import path from "path"
 import { loadConfig, getConfigPath } from "./config"
 import { getStateDir } from "./paths"
 import { toModelInfo } from "./toV2"
+import { matchesAny } from "./match"
+import { firstDivergence, summarizeRequest } from "./diagnostics"
+import { randomUUID } from "crypto"
 import { LiteLLMClient } from "./fetch"
 import { transformModels } from "./transform"
 import { buildBlacklist } from "./filter"
@@ -57,7 +60,7 @@ export default {
     })
     if (!config) return
 
-    const { budgetPollInterval, fallbackToCache, timeout } = config.options
+    const { budgetPollInterval, fallbackToCache, timeout, cachePrefixDiagnostics } = config.options
     const budgetTracker = new BudgetTracker(stateManager, budgetPollInterval, log)
     const clientMap = new Map<string, { client: LiteLLMClient; name: string }>()
     const entries: Array<{ info: Provider.Info; models: Model.Info[] }> = []
@@ -120,7 +123,11 @@ export default {
           },
         },
         models: Object.values(models).map((entry) =>
-          toModelInfo(endpoint.providerKey, entry, !disabled.has(entry.id), setCacheKey),
+          toModelInfo(endpoint.providerKey, entry, {
+            enabled: !disabled.has(entry.id),
+            anthropic: matchesAny(entry.id, endpoint.anthropicModels),
+            supportsPromptCacheKey: setCacheKey,
+          }),
         ),
       })
       clientMap.set(endpoint.providerKey, { client, name })
@@ -128,6 +135,11 @@ export default {
     }
 
     log(`Provider injection complete: ${entries.length}/${config.endpoints.length} endpoints`)
+    entries.forEach((entry) =>
+      log(
+        `${entry.info.id}: ${entry.models.filter((model) => model.package).length}/${entry.models.length} models use the Anthropic route`,
+      ),
+    )
 
     await ctx.provider.transform((editor) => {
       entries.forEach((entry) => editor.add(entry))
@@ -138,6 +150,27 @@ export default {
         budgetTracker.fetchAndStore(providerKey, name, client).catch(() => {})
       })
     })
+
+    if (cachePrefixDiagnostics) {
+      const previous = new Map<string, string[]>()
+      await ctx.session.hook("http.request", async (event) => {
+        if (event.kind !== "primary") return
+        const body = await event.request.clone().json().catch(() => undefined)
+        if (typeof body !== "object" || body === null) return
+        const { block_hashes, ...summary } = summarizeRequest(body)
+        const before = previous.get(event.sessionID)
+        previous.set(event.sessionID, block_hashes)
+        log(
+          JSON.stringify({
+            request_id: randomUUID(),
+            provider: event.model.providerID,
+            model: event.model.id,
+            ...summary,
+            first_divergence_index: before ? firstDivergence(before, block_hashes) : null,
+          }),
+        )
+      })
+    }
 
     return () => budgetTracker.stopAll()
   },

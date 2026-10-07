@@ -233,3 +233,30 @@ export function mapLimit(hub: AnyRecord, info: AnyRecord): AnyRecord | null {
 		output: Number(maxOutput),
 	};
 }
+
+const ANTHROPIC_EFFORT_LEVELS = ["low", "medium", "high", "xhigh", "max"];
+
+export type Thinking = { mode: "adaptive"; efforts: string[] } | { mode: "budget" };
+
+/**
+ * Describe how a Claude model takes reasoning settings on the Anthropic route.
+ *
+ * LiteLLM only flags the levels beyond the base ones (`supports_xhigh_…`,
+ * `supports_max_…`), so low/medium/high are implied by adaptive thinking.
+ * Models with reasoning but no adaptive flag use a token budget.
+ */
+export function mapThinking(hub: AnyRecord, info: AnyRecord): Thinking | undefined {
+	if (info.supports_adaptive_thinking === true) {
+		const reported = new Set<string>(info.supports_reasoning_efforts ?? []);
+		return {
+			mode: "adaptive",
+			efforts: ANTHROPIC_EFFORT_LEVELS.filter(
+				(level, index) => index < 3 || reported.has(level),
+			),
+		};
+	}
+	if (info.supports_reasoning === true || hub.supports_reasoning === true) {
+		return { mode: "budget" };
+	}
+	return undefined;
+}

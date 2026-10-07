@@ -42,6 +42,12 @@ export const EndpointConfigSchema = z.object({
   enabledCategories: z.array(CategorySchema).optional(),
   enableAllCategories: z.boolean().optional().default(false),
   providerOptions: ProviderOptionsSchema.optional(),
+  // Glob patterns (`*` only) matched against model IDs. Matching models use the
+  // Anthropic-native Messages route instead of the OpenAI-compatible one.
+  anthropicModels: z
+    .array(z.string().regex(/^[\w.*:/@-]+$/, "Invalid model pattern"))
+    .optional()
+    .default(["claude-*"]),
 })
 
 // Server configuration schema
@@ -51,6 +57,8 @@ export const ServerConfigSchema = z.object({
     timeout: z.number().optional().default(30),
     budgetPollInterval: z.number().optional().default(60),
     fallbackToCache: z.boolean().optional().default(true),
+    // Logs only counts and hashes of outgoing requests, to diagnose prompt-cache misses.
+    cachePrefixDiagnostics: z.boolean().optional().default(false),
   }).optional().default({}),
 })
 

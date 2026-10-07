@@ -3,7 +3,7 @@
  */
 
 import type { Category } from "./categorize";
-import { mapCost, mapFlags, mapLimit, mapModalities, mapVariants } from "./map";
+import { mapCost, mapFlags, mapLimit, mapModalities, mapThinking, mapVariants } from "./map";
 
 type AnyRecord = Record<string, any>;
 
@@ -58,6 +58,12 @@ export function buildModelEntry(
 	const variants = mapVariants(info);
 	if (variants !== undefined) {
 		model.variants = variants;
+	}
+
+	// Raw thinking capabilities, used by the Anthropic route (see toV2.ts).
+	const thinking = mapThinking(hub, info);
+	if (thinking !== undefined) {
+		model.thinking = thinking;
 	}
 
 	return model;
