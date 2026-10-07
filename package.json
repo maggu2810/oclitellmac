@@ -36,22 +36,21 @@
   },
   "homepage": "https://github.com/maggu2810/oclitellmac#readme",
   "dependencies": {
-    "@opencode-ai/plugin": "^1.15.0",
-    "@opencode-ai/sdk": "^1.15.0",
     "xdg-basedir": "^5.1.0",
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@opentui/core": "0.2.6",
-    "@opentui/keymap": "0.2.6",
-    "@opentui/solid": "0.2.6",
+    "@opencode/plugin": "^2.0.24",
+    "@opentui/core": "0.5.14",
+    "@opentui/keymap": "0.5.14",
+    "@opentui/solid": "0.5.14",
     "solid-js": "*",
     "typescript": "^5.6.0"
   },
   "peerDependencies": {
-    "@opentui/core": ">=0.2.6",
-    "@opentui/keymap": ">=0.2.6",
-    "@opentui/solid": ">=0.2.6",
+    "@opentui/core": ">=0.5.14",
+    "@opentui/keymap": ">=0.5.14",
+    "@opentui/solid": ">=0.5.14",
     "solid-js": ">=1.0.0"
   },
   "peerDependenciesMeta": {

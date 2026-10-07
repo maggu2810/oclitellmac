@@ -1,12 +1,12 @@
 /** @jsxImportSource @opentui/solid */
-import type { TuiPluginApi } from '@opencode-ai/plugin/tui'
+import type { Plugin } from '@opencode/plugin/tui'
 import type { RGBA } from '@opentui/core'
 import type { ProviderBudget } from '../types'
 import { formatCurrency, formatPercent, formatProgressBar, formatRelativeTime, formatAbsoluteTimeLocale } from '../utils/format'
 
 interface ProviderCardProps {
   budget: ProviderBudget
-  theme: TuiPluginApi['theme']['current']
+  theme: Plugin.Context['theme']
 }
 
 /**
@@ -23,10 +23,10 @@ export function ProviderCard(props: ProviderCardProps) {
       padding={1}
       marginBottom={1}
       borderStyle="rounded"
-      borderColor={theme().border}
+      borderColor={theme().border.base}
     >
       {/* Provider name */}
-      <text fg={theme().text}>
+      <text fg={theme().text.base}>
         <b>{budget.providerName}</b>
       </text>
 
@@ -36,7 +36,7 @@ export function ProviderCard(props: ProviderCardProps) {
       </text>
 
       {/* Spend / Limit */}
-      <text fg={theme().textMuted}>
+      <text fg={theme().text.muted}>
         {formatCurrency(budget.spend)} / {formatCurrency(budget.limit)}
       </text>
 
@@ -46,15 +46,15 @@ export function ProviderCard(props: ProviderCardProps) {
       </text>
 
       {/* Remaining budget */}
-      <text fg={theme().textMuted}>{formatCurrency(budget.remaining)} remaining</text>
+      <text fg={theme().text.muted}>{formatCurrency(budget.remaining)} remaining</text>
 
       {/* Reset date */}
-      <text fg={theme().textMuted}>
+      <text fg={theme().text.muted}>
         Resets {formatRelativeTime(budget.resetAt)} ({budget.duration})
       </text>
 
       {/* Fetch timestamp */}
-      <text fg={theme().textMuted}>
+      <text fg={theme().text.muted}>
         Fetched {formatAbsoluteTimeLocale(budget.lastFetched)}
       </text>
     </box>
@@ -66,10 +66,10 @@ export function ProviderCard(props: ProviderCardProps) {
  */
 function percentColor(
   percent: number,
-  theme: () => TuiPluginApi['theme']['current'],
+  theme: () => Plugin.Context['theme'],
 ): RGBA {
   const t = theme()
-  if (percent >= 90) return t.error // Red - danger zone
-  if (percent >= 75) return t.warning // Yellow - warning
-  return t.success // Green - healthy
+  if (percent >= 90) return t.text.feedback.error.base // Red - danger zone
+  if (percent >= 75) return t.text.feedback.warning.base // Yellow - warning
+  return t.text.feedback.success.base // Green - healthy
 }

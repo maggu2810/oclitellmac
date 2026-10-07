@@ -14,7 +14,7 @@ const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
 // Externalize all packages from dependencies, devDependencies, and peerDependencies.
 //
 // Why this approach:
-// - dependencies (@opencode-ai/plugin, @opencode-ai/sdk, xdg-basedir, zod):
+// - dependencies (xdg-basedir, zod):
 //   Installed by arborist during plugin install, resolved from node_modules at runtime.
 //
 // - devDependencies (@opentui/*, solid-js):
@@ -26,7 +26,7 @@ const { createSolidTransformPlugin } = await import("@opentui/solid/bun-plugin")
 //   Binary resolves at runtime → ensures single shared instance (critical for RendererContext).
 //
 // Version pinning requirement:
-// - @opentui/* packages in devDependencies are pinned to match the OpenCode binary version (0.2.6).
+// - @opentui/* packages in devDependencies are pinned to match the OpenCode binary version (0.5.14).
 // - Check repos/opencode/package.json catalog for the current version.
 // - Mismatched versions cause registerEnvVar() conflicts or RendererContext isolation.
 const external = [

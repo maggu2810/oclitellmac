@@ -25,10 +25,10 @@ const ProviderOptionsSchema = z.object({
   // Milliseconds. `false` disables the timeout entirely.
   timeout: z.union([z.number(), z.literal(false)]).optional(),
   // Milliseconds between streamed SSE chunks before aborting.
-  chunkTimeout: z.number().optional(),
+  chunkTimeout: z.union([z.number(), z.literal(false)]).optional(),
   // Milliseconds to wait for response headers. `false` disables it.
   headerTimeout: z.union([z.number(), z.literal(false)]).optional(),
-  // Ensure a cache key is always set for this provider.
+  // Marks every model of this provider as supporting a prompt cache key.
   setCacheKey: z.boolean().optional(),
 })
 
@@ -42,11 +42,6 @@ export const EndpointConfigSchema = z.object({
   enabledCategories: z.array(CategorySchema).optional(),
   enableAllCategories: z.boolean().optional().default(false),
   providerOptions: ProviderOptionsSchema.optional(),
-  // Env var names OpenCode checks for the API key. This is a top-level
-  // provider field (sibling to `options`), not nested inside it. This
-  // plugin already injects apiKey directly, so this is rarely needed —
-  // useful mainly as a fallback for tooling that reads env vars directly.
-  env: z.array(z.string()).optional(),
 })
 
 // Server configuration schema
