@@ -7,6 +7,7 @@ plugins/oclitellmac/
 ├── package.json          # exports ./server and ./tui -> dist/
 ├── tsconfig.json         # type checking only (noEmit)
 ├── scripts/build.ts      # Bun build for both bundles
+├── scripts/cache-report.ts  # Per-request prompt-cache table for a session
 ├── server/
 │   ├── src/              # server plugin source
 │   ├── test/             # bun tests

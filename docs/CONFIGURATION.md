@@ -254,8 +254,29 @@ Where the lifetime is decided:
 | LiteLLM | Yes, if whoever operates the gateway enables gateway-side injection. `litellm_settings.enable_anthropic_prompt_caching` with `anthropic_prompt_caching_ttl: "1h"` adds breakpoints for requests that have none. LiteLLM leaves requests that already carry `cache_control` alone, so it does not change what OpenCode sends. |
 | Anthropic | Defines the allowed values (5 minutes or 1 hour) and the prices. |
 
-To see cache behavior in a session, read the `cache.read` and `cache.write` token counts of
-each assistant message, or enable `cachePrefixDiagnostics`.
+To see cache behavior in a session, run the report script (see [Cache Report](#cache-report)).
+
+#### Cache Report
+
+`scripts/cache-report.ts` prints one row per model request of an OpenCode session: input,
+cache read, cache write, output, cost and cache hit rate. The numbers come from
+OpenCode's database, which it opens read-only, and no prompt content is read.
+
+```bash
+bun scripts/cache-report.ts --list                   # recent sessions
+bun scripts/cache-report.ts                          # latest session
+bun scripts/cache-report.ts <session-id> --last 10   # last 10 requests
+bun scripts/cache-report.ts <session-id> --log       # add prefix diagnostics
+bun scripts/cache-report.ts --since 2026-10-08 --model sonnet --format markdown
+```
+
+With `--log` it joins the lines that `cachePrefixDiagnostics` writes to `server.log`:
+breakpoint count, tool count, short hashes of the tool schema and request options, and the
+index of the first block that changed since the previous request. A healthy session has
+4 breakpoints, constant hashes and an index that only grows. A row with 0 breakpoints or a
+low index is a request whose prefix changed, and the cache write on that row is the cost.
+Requests the plugin does not log, such as title generation, show `-`. Run
+`bun scripts/cache-report.ts --help` for all options.
 
 ## Global Options Reference
 
