@@ -59,6 +59,8 @@ export const ServerConfigSchema = z.object({
     fallbackToCache: z.boolean().optional().default(true),
     // Logs only counts and hashes of outgoing requests, to diagnose prompt-cache misses.
     cachePrefixDiagnostics: z.boolean().optional().default(false),
+    // Logs a line for every budget refresh (one per endpoint and minute, plus one per prompt).
+    budgetUpdateDiagnostics: z.boolean().optional().default(false),
   }).optional().default({}),
 })
 

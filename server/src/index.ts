@@ -60,8 +60,8 @@ export default {
     })
     if (!config) return
 
-    const { budgetPollInterval, fallbackToCache, timeout, cachePrefixDiagnostics } = config.options
-    const budgetTracker = new BudgetTracker(stateManager, budgetPollInterval, log)
+    const { budgetPollInterval, fallbackToCache, timeout, cachePrefixDiagnostics, budgetUpdateDiagnostics } = config.options
+    const budgetTracker = new BudgetTracker(stateManager, budgetPollInterval, log, budgetUpdateDiagnostics)
     const clientMap = new Map<string, { client: LiteLLMClient; name: string }>()
     const entries: Array<{ info: Provider.Info; models: Model.Info[] }> = []
 

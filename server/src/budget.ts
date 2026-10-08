@@ -12,7 +12,8 @@ export class BudgetTracker {
   constructor(
     private stateManager: StateManager,
     private pollInterval: number,
-    private log: (message: string) => void
+    private log: (message: string) => void,
+    private logUpdates = false
   ) {}
   
   /**
@@ -33,7 +34,7 @@ export class BudgetTracker {
         keyInfo,
       })
       
-      this.log(`Budget data updated for ${providerKey}`)
+      if (this.logUpdates) this.log(`Budget data updated for ${providerKey}`)
     } catch (error) {
       this.log(
         `Failed to fetch budget for ${providerKey}: ${error instanceof Error ? error.message : String(error)}`
