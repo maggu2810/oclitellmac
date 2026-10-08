@@ -27,7 +27,7 @@ Development guide covering build process, dependency management, import conventi
 Step-by-step guide for publishing the plugin to npm registry, including versioning, building, verification, and troubleshooting.
 
 ### [Known Issues](KNOWN-ISSUES.md)
-Open problems, pending validation steps and possible fixes.
+Open problems and possible fixes.
 
 ### Server Plugin Technical Documentation
 

@@ -145,12 +145,12 @@ the full file structure.
       `max` where LiteLLM reports them; budget-only models list `high` and `max`
 - [ ] Non-Claude models stay on the OpenAI-compatible route and still answer
 - [ ] With `options.cachePrefixDiagnostics: true`, each primary request adds a
-      JSON line with `cache_control_present: true`; across consecutive steps
-      `stable_prefix_hash` stays unchanged and `first_divergence_index` is
-      `null` or points at the conversation tail
-- [ ] Directly against the gateway, two identical requests with a large stable
-      prefix and `cache_control`: the second reports a large
-      `cache_read_input_tokens`
+      JSON line with `cache_control_present: true` and 4 breakpoints;
+      `tool_schema_hash` and `provider_options_hash` stay the same across steps,
+      and `first_divergence_index` only moves forward
+- [ ] In a session, the first request writes the context to the cache and the
+      following steps read it (`cache.read` close to the full context and only
+      the newest turn in `cache.write`)
 
 ### Error Handling Tests
 - [ ] Invalid JSON in config file - check error message
@@ -166,7 +166,7 @@ the full file structure.
 <timestamp> Started budget tracking for my-litellm (interval: 60s)
 <timestamp> Provider injection complete: 1/1 endpoints
 <timestamp> my-litellm: 4/15 models use the Anthropic route
-<timestamp> Budget data updated for my-litellm
+<timestamp> Budget data updated for my-litellm   (only with options.budgetUpdateDiagnostics)
 ```
 
 ## 🚨 Common Issues & Solutions

@@ -174,7 +174,7 @@ When regenerating, draw content from:
 | `docs/DEVELOPMENT.md` | `docs/` | Development guide |
 | `docs/PUBLISH.md` | `docs/` | npm publishing guide |
 | `docs/opencode-plugin-cli.md` | `docs/` | OpenCode v2 plugin CLI, spec formats, config files |
-| `docs/KNOWN-ISSUES.md` | `docs/` | Open issues and pending validation |
+| `docs/KNOWN-ISSUES.md` | `docs/` | Open issues |
 | `docs/docu-handling.md` | `docs/` | This guide |
 | `docs/agents-file-conventions.md` | `docs/` | AGENTS.md conventions |
 | `server/README.md` | `server/` | Server plugin technical details |

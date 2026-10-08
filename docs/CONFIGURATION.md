@@ -228,6 +228,35 @@ The default is `["claude-*"]`, which also covers aliases such as
 route. The gateway must expose `POST <baseUrl>/v1/messages`; check that
 before relying on the default.
 
+##### Prompt cache lifetime
+
+On the Anthropic route OpenCode marks up to four cache breakpoints per request (last tool,
+first and last system block, newest message). The provider then keeps those prefixes
+cached for a limited time, and every use of a cached prefix extends it:
+
+- A request that finds its prefix cached reads it at the cache-read rate. Only the
+  new tail is written. This is the normal case during an active session.
+- A prefix that was not used within the lifetime is dropped. The next request pays
+  the cache-write rate for the whole context again, which is the most expensive
+  request of a session.
+
+The default lifetime is 5 minutes, measured from the start of the last request
+that used the entry. The 1-hour lifetime costs more per cache write (2x instead of
+1.25x the input price) and pays off only when pauses between prompts are longer than
+5 minutes. Cache reads cost the same for both.
+
+Where the lifetime is decided:
+
+| Layer | Can change it? |
+|---|---|
+| Model, provider settings and `server.json` | No. The plugin has no TTL setting. |
+| OpenCode | Only through the `ttl` that its cache policy puts on a breakpoint. The default policy sets none (5 minutes), and OpenCode v2.0.24 exposes no config key for it. |
+| LiteLLM | Yes, if whoever operates the gateway enables gateway-side injection. `litellm_settings.enable_anthropic_prompt_caching` with `anthropic_prompt_caching_ttl: "1h"` adds breakpoints for requests that have none. LiteLLM leaves requests that already carry `cache_control` alone, so it does not change what OpenCode sends. |
+| Anthropic | Defines the allowed values (5 minutes or 1 hour) and the prices. |
+
+To see cache behavior in a session, read the `cache.read` and `cache.write` token counts of
+each assistant message, or enable `cachePrefixDiagnostics`.
+
 ## Global Options Reference
 
 The optional `options` object configures global plugin behavior:
@@ -238,6 +267,7 @@ The optional `options` object configures global plugin behavior:
 | `budgetPollInterval` | number | `60` | How often to poll `/key/info` in seconds |
 | `fallbackToCache` | boolean | `true` | Use cached data if endpoint unreachable |
 | `cachePrefixDiagnostics` | boolean | `false` | Log request counts and hashes to `server.log` to diagnose prompt-cache misses |
+| `budgetUpdateDiagnostics` | boolean | `false` | Log a line to `server.log` for every budget refresh |
 
 ### Configuration Example
 
@@ -253,6 +283,13 @@ The optional `options` object configures global plugin behavior:
 ```
 
 ### Option Details
+
+#### `budgetUpdateDiagnostics`
+
+Budget data is refreshed once a minute per endpoint and again on every prompt. When
+`true`, each refresh logs `Budget data updated for <providerKey>` to
+`~/.local/state/oclitellmac/server.log`. The default is `false`, because with many
+endpoints this is dozens of lines per minute. Failed refreshes are always logged.
 
 #### `cachePrefixDiagnostics`
 

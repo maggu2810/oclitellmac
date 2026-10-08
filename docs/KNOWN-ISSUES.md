@@ -2,17 +2,6 @@
 
 Open items for the oclitellmac plugin. Remove an entry when it is fixed.
 
-## Anthropic route not yet validated end to end
-
-**Status**: open, needs a manual check.
-
-Still to do in a live OpenCode session against a LiteLLM gateway:
-
-- Enable `options.cachePrefixDiagnostics` in `server.json` and confirm that primary requests log `cache_control_present: true` and a stable `stable_prefix_hash` across steps.
-- Run the two-call cache check directly against the gateway: two identical requests with a large stable prefix and `cache_control`; the second should report a large `cache_read_input_tokens`.
-
-For the exact steps, [read here](../server/VERIFICATION.md).
-
 ## TUI watcher polls forever when `key-info/` is missing at startup
 
 **Status**: open.
