@@ -73,7 +73,7 @@ Create `~/.config/oclitellmac/server.json` with your LiteLLM endpoint(s):
 - Loads on OpenCode startup
 - Fetches model lists from LiteLLM endpoints
 - Registers providers with OpenCode
-- Starts budget tracking (polls every 60s)
+- Starts budget tracking (polls the provider in use every 60s, the others every 10 minutes)
 - Writes data to state directory (see Platform-Specific Paths below)
 
 ### TUI Plugin

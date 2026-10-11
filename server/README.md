@@ -36,6 +36,7 @@ plugins/oclitellmac/server/src/
 ├── match.ts           # Model ID glob matching
 ├── toV2.ts            # Model entry → V2 Model.Info, per route
 ├── diagnostics.ts     # Request summaries for prompt-cache debugging
+├── log.ts             # RotatingLog for server.log
 ├── budget.ts          # Budget polling and tracking
 └── state.ts           # File-based state management with locking
 ```
@@ -63,10 +64,10 @@ When looking for the rationale and alternatives considered, [read here](../docs/
 #### `index.ts` - Plugin Orchestration
 - Default export is `{ id: "oclitellmac.server", setup(ctx) }`
 - `setup` loads the configuration, fetches every enabled endpoint (with cache fallback), converts the results and registers them once with `ctx.provider.transform`
-- Registers a `prompt` session hook that triggers a budget refresh
+- Registers a `model.request` session hook that refreshes the budget of the provider being used
 - Registers the optional `http.request` diagnostics hook when `cachePrefixDiagnostics` is on
 - Returns a cleanup function that stops budget polling
-- Logs to `~/.local/state/oclitellmac/server.log` (the plugin context has no logging API)
+- Logs to `~/.local/state/oclitellmac/server.log` through `RotatingLog`, which moves the file to `server.log.1` above 2 MiB (the plugin context has no logging API)
 
 #### `config.ts` - Configuration Schema
 - Defines Zod schemas for validation:
@@ -159,6 +160,9 @@ hubEntries + infoMap
 - OpenAI-compatible route: variants use `reasoningEffort`
 - Costs, limits and capabilities are identical on both routes
 
+#### `log.ts` - Rotating Log
+- `RotatingLog(file, maxBytes)`: appends lines, serialized, and moves the file to `<file>.1` once it exceeds `maxBytes` (2 MiB for `server.log`); IO errors are swallowed
+
 #### `diagnostics.ts` - Cache Diagnostics
 - `summarizeRequest(body)`: Counts and hashes only (breakpoints, system and tool counts, tool-schema hash, stable-prefix hash, options hash). Never content
 - `firstDivergence(previous, current)`: Index of the first block that changed since the previous request
@@ -166,12 +170,14 @@ hubEntries + infoMap
 
 #### `budget.ts` - Budget Tracking
 - `BudgetTracker` class:
-  - `startTracking(providerKey, providerName, client)`: Initiates periodic polling
+  - `startTracking(providerKey, providerName, client)`: Fetches once, then adds the provider to the single polling timer
   - `fetchAndStore(providerKey, providerName, client)`: One-time budget fetch
+  - `refreshForRequest(providerKey)`: Marks the provider as in use and refreshes it unless it was fetched within the last 10 seconds
   - `stopTracking(providerKey)`: Cleanup for one provider
   - `stopAll()`: Cleanup for all providers (called from the setup cleanup)
+- `pickBudgetFields(keyInfo)`: Projection of `/key/info` onto the fields the TUI reads
 - Stores budget data to `~/.local/state/oclitellmac/key-info/<providerKey>.json`
-- Polling interval configurable via `budgetPollInterval` (default: 60s)
+- Polling interval configurable via `budgetPollInterval` (default: 60s); providers not used in the last 30 minutes are polled every 10th interval
 - Includes `providerName` in budget files for TUI display
 
 **Budget File Format**:
@@ -180,9 +186,13 @@ hubEntries + infoMap
   "providerKey": "litellm-prod",
   "providerName": "LiteLLM Production",
   "fetchedAt": 1736647260000,
-  "keyInfo": { /* LiteLLM /key/info response */ }
+  "keyInfo": {
+    "info": { "key_alias": "...", "spend": 1.23, "max_budget": 10, "budget_duration": "30d", "budget_reset_at": "...", "expires": null }
+  }
 }
 ```
+
+Only the fields above are stored; the rest of the `/key/info` response, including the key itself, is dropped.
 
 #### `state.ts` - State Management
 - `StateManager` class:
@@ -192,7 +202,8 @@ hubEntries + infoMap
   - `loadBudgetData(providerKey)`: Read cached budget data
   - `getProviderCacheDir()`, `getBudgetDataDir()`: Path getters (delegate to `paths.ts`)
 - Uses `fs.promises` with exclusive locking to prevent write collisions
-- Paths obtained via `paths.ts` module (XDG-compliant)
+- Files are written atomically (temp file, then rename) with mode 0600, in directories created with mode 0700
+- Paths obtained via `paths.ts` module (XDG-compliant); the constructor accepts directories for tests
 
 **Locking Strategy**: Promise serialization via `Map<key, Promise>` - no external lock files needed
 
@@ -276,7 +287,7 @@ Both map to a second cost tier at 200,000 context tokens.
 
 ### Startup Time
 - Each endpoint adds ~1-2s to OpenCode startup (network fetch)
-- Parallel fetching (`Promise.all`) for `/public/model_hub` and `/v1/model/info`
+- Endpoints are fetched concurrently; `/public/model_hub` is fetched once per base URL and `/v1/model/info` once per endpoint
 - Cached fallback keeps startup fast when endpoints are down
 - No model is ever prompted at startup; only GET requests are made
 
@@ -286,7 +297,7 @@ Both map to a second cost tier at 200,000 context tokens.
 - All data stored as JSON files (no in-memory DB)
 
 ### Budget Polling
-- Default: 60s interval + per-prompt trigger
+- Default: 60s interval for the provider in use, every 10th interval for the others, plus a refresh of the provider used by each primary request (at most once per 10 seconds)
 - Minimal overhead (~100ms HTTP request)
 - Fire-and-forget (doesn't block chat responses)
 

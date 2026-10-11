@@ -5,7 +5,7 @@
 ```
 plugins/oclitellmac/
 ├── package.json          # exports ./server and ./tui -> dist/
-├── tsconfig.json         # type checking only (noEmit)
+├── tsconfig.json         # type checking only (noEmit), run with `bun run typecheck`
 ├── scripts/build.ts      # Bun build for both bundles
 ├── scripts/cache-report.ts  # Per-request prompt-cache table for a session
 ├── server/
@@ -14,6 +14,7 @@ plugins/oclitellmac/
 │   └── *.md              # ARCHITECTURE, IMPLEMENTATION, VERIFICATION, README
 ├── tui/
 │   ├── src/              # TUI plugin source (Solid JSX)
+│   ├── test/             # bun tests
 │   └── README.md
 ├── docs/                 # CONFIGURATION, INSTALL, PUBLISH, PATH-STRATEGY, ...
 └── dist/                 # build output (gitignored)
@@ -81,11 +82,12 @@ import type { ProviderBudget } from "./types"
 
 ## Testing
 
-Unit tests live in `server/test/`:
+Unit tests live in `server/test/` and `tui/test/`. The type check covers `server/src` and `tui/src` (the build only bundles):
 
 ```bash
 cd plugins/oclitellmac
 bun test
+bun run typecheck
 ```
 
 When running the manual end-to-end checklist (including cache diagnostics), [read here](../server/VERIFICATION.md)

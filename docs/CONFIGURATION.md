@@ -289,6 +289,8 @@ The optional `options` object configures global plugin behavior:
 | `fallbackToCache` | boolean | `true` | Use cached data if endpoint unreachable |
 | `cachePrefixDiagnostics` | boolean | `false` | Log request counts and hashes to `server.log` to diagnose prompt-cache misses |
 | `budgetUpdateDiagnostics` | boolean | `false` | Log a line to `server.log` for every budget refresh |
+| `tui.logLevel` | string | `"warn"` | Lowest level the sidebar plugin logs: `error`, `warn`, `info` or `debug` |
+| `tui.sidebarMode` | string | `"current"` | What the sidebar shows at startup: `current`, `all`, `hidden` or `masked` |
 
 ### Configuration Example
 
@@ -304,6 +306,37 @@ The optional `options` object configures global plugin behavior:
 ```
 
 ### Option Details
+
+#### `tui`
+
+Settings of the sidebar plugin, which reads them from this file once at startup.
+
+```json
+"options": {
+  "tui": { "logLevel": "warn", "sidebarMode": "current" }
+}
+```
+
+`logLevel` is the lowest level written to `~/.local/state/oclitellmac/log/tui/`. At the default
+`warn` the sidebar logs only problems, such as an unreadable budget file, and creates no log
+file while nothing goes wrong. `info` adds start, stop and watcher messages, and `debug` adds
+every budget reload. At most 5 log files of 1 MiB are kept.
+
+`sidebarMode` is the start value for what the sidebar shows:
+
+| Mode | Shows |
+|---|---|
+| `current` | The budget of the provider of the selected model only |
+| `all` | The budgets of all providers |
+| `hidden` | One line saying the budget is hidden, no names or amounts |
+| `masked` | Progress bar and percent of the selected provider only, no names, amounts or dates |
+
+While OpenCode runs, the `/budget` command (also in the command palette) switches the mode. It
+opens a list, and `/budget masked` sets a mode directly. The choice is stored per user and
+applies to all TUI windows. It replaces `sidebarMode` after the first change.
+
+A key without a budget limit (or a limit of 0) shows its spend and "No budget limit" instead of
+a progress bar.
 
 #### `budgetUpdateDiagnostics`
 
@@ -331,7 +364,10 @@ Maximum time (in seconds) to wait for LiteLLM API responses.
 
 #### `budgetPollInterval`
 
-How often (in seconds) to poll the `/key/info` endpoint for budget updates.
+How often (in seconds) to poll the `/key/info` endpoint for budget updates. The provider you
+used in the last 30 minutes is polled every interval. All other providers are polled every 10
+intervals, so many idle keys cost almost nothing. A request also refreshes the budget of the
+provider it uses, at most once every 10 seconds.
 
 **Recommendations:**
 - **High-frequency usage**: `30-60` seconds (default: 60)
@@ -532,7 +568,7 @@ For high-frequency usage where you need near-real-time budget tracking:
 }
 ```
 
-**Warning**: More frequent polling increases API load. The plugin already fetches budget after each chat message, so this is mainly for passive monitoring.
+**Warning**: More frequent polling increases API load. The plugin already refreshes the budget of the provider you use on each request, so this is mainly for passive monitoring.
 
 ### Disable Fallback for Testing
 

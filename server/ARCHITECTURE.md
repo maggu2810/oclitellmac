@@ -17,7 +17,7 @@ The server plugin (`oclitellmac/server`) automatically registers multiple LiteLL
 2. **Setup-Time Registration**: `setup(ctx)` fetches every endpoint first, then registers the results once with `ctx.provider.transform`. The transform callback is synchronous, so all network I/O happens before it
 3. **Modular Pipeline**: Fetch → Categorize → Map → Build → Convert (`toV2`)
 4. **Smart Caching**: Falls back to cached provider data when endpoints are unreachable
-5. **Budget Tracking**: Continuous polling plus a refresh on each prompt via the `prompt` session hook
+5. **Budget Tracking**: One timer polls the providers (recently used ones every interval, idle ones every 10 intervals) and each primary request refreshes only the provider it uses, via the `model.request` session hook
 6. **Category Filtering**: Non-chat models are registered with `enabled: false` by default (configurable per endpoint)
 7. **Two Routes, One Provider**: Claude models use the Anthropic-native Messages route; all other models use the OpenAI-compatible route. Both live under the same provider, credentials and base URL
 
@@ -39,6 +39,7 @@ plugins/oclitellmac/server/src/
 ├── match.ts           # Model ID glob matching (`anthropicModels`)
 ├── toV2.ts            # Model entry → V2 `Model.Info`, per route
 ├── diagnostics.ts     # Request summaries for prompt-cache debugging
+├── log.ts             # RotatingLog for server.log
 ├── budget.ts          # Budget polling and tracking
 └── state.ts           # File-based state management with locking
 ```
@@ -55,9 +56,10 @@ For the functions and behavior of each module, when working on a specific module
 1. Load ~/.config/oclitellmac/server.json
    (missing or invalid → log the reason, register nothing)
    ↓
-2. For each enabled endpoint:
+2. Group the enabled endpoints by base URL and fetch /public/model_hub once per
+   base URL. For each enabled endpoint, concurrently:
    a. Create LiteLLMClient
-   b. Fetch /public/model_hub and /v1/model/info in parallel
+   b. Fetch /v1/model/info (the shared model hub result is reused)
    ↓
 3. Transform pipeline:
    hubEntries + infoMap → transformModels()
@@ -104,11 +106,12 @@ Cached model entries written by an older plugin version may lack newer fields. T
 ### Budget Tracking Flow
 
 ```
-1. Periodic timer (every 60s):
-   fetchAndStore(providerKey, providerName, client)
+1. One timer (every 60s):
+   fetch the providers that are due: the provider used in the last 30
+   minutes every interval, all others every 10th interval
    ↓
-2. Prompt hook (ctx.session.hook("prompt")):
-   trigger an immediate refresh for every endpoint
+2. Request hook (ctx.session.hook("model.request"), primary requests only):
+   refresh the budget of that request's provider, at most once per 10 seconds
    ↓
 3. Fetch /key/info:
    GET {baseUrl}/key/info
@@ -195,7 +198,7 @@ Earlier plugin versions set a `litellmProxy` option to work around an Anthropic 
 | **Output** | Registers providers at runtime through the plugin API | Writes `opencode.jsonc` file |
 | **Endpoints** | Multiple per plugin | One per invocation |
 | **Caching** | Automatic with fallback | None |
-| **Budget Tracking** | Continuous (60s polling + per-prompt) | None |
+| **Budget Tracking** | Continuous (60s polling, per-request refresh of the provider in use) | None |
 | **Restart Required** | Yes (for config changes) | No (manual re-run) |
 | **Module Structure** | TypeScript (`.ts` files) | Python (`.py` files) |
 | **Shared Logic** | ✅ Same pipeline, field mappings, category detection | ✅ Same |

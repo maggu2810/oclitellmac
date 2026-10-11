@@ -99,7 +99,7 @@ The plugin will automatically:
 - ✅ Fetch models from LiteLLM `/public/model_hub` and `/v1/model/info`
 - ✅ Cache results to `~/.local/state/oclitellmac/providers/`
 - ✅ Register providers with OpenCode (no manual `opencode.json` editing needed!)
-- ✅ Start budget tracking (polls `/key/info` every 60 seconds)
+- ✅ Start budget tracking (polls `/key/info` every 60 seconds for the provider in use)
 
 ## 🎯 Key Features Implemented
 
@@ -145,7 +145,7 @@ The plugin will automatically:
 
 ### ✅ 6. Budget Tracking
 - Polls `/key/info` every 60 seconds (configurable)
-- Fetches on each prompt (`prompt` session hook)
+- Refreshes the provider in use on each primary request (`model.request` session hook)
 - Stores data in `~/.local/state/oclitellmac/key-info/`
 - File locking prevents concurrent write collisions
 
@@ -190,8 +190,8 @@ The plugin will automatically:
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  Budget Tracking (Continuous)                                │
-│  1. Every 60 seconds: Poll /key/info for all providers       │
-│  2. On each prompt (prompt hook): Fetch /key/info            │
+│  1. Every 60 seconds: Poll the provider in use (others 10x)  │
+│  2. On each request (model.request hook): Fetch /key/info    │
 │  3. Store to ~/.local/state/oclitellmac/key-info/            │
 │     (with file locking)                                      │
 └─────────────────────────────────────────────────────────────┘

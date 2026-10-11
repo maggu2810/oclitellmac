@@ -199,7 +199,7 @@ This guide covers common issues when using the oclitellmac plugin.
    ```
 
 4. **Wait 60 seconds for initial budget fetch**:
-   - Server plugin polls `/key/info` every 60 seconds by default
+   - Server plugin polls `/key/info` every 60 seconds by default for the provider in use (others every 10 minutes)
    - First fetch happens on startup + 60s delay
 
 5. **Check state directory path** (platform-specific):
