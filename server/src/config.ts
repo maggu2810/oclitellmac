@@ -61,6 +61,16 @@ export const ServerConfigSchema = z.object({
     cachePrefixDiagnostics: z.boolean().optional().default(false),
     // Logs a line for every budget refresh (one per endpoint and minute, plus one per prompt).
     budgetUpdateDiagnostics: z.boolean().optional().default(false),
+    // Settings of the sidebar plugin, which reads them from this file.
+    tui: z
+      .object({
+        // Lowest level written to ~/.local/state/oclitellmac/log/tui. `debug` also logs every budget reload.
+        logLevel: z.enum(["error", "warn", "info", "debug"]).optional().default("warn"),
+        // What the sidebar shows at startup. The /budget command changes it while OpenCode runs.
+        sidebarMode: z.enum(["current", "all", "hidden", "masked"]).optional().default("current"),
+      })
+      .optional()
+      .default({}),
   }).optional().default({}),
 })
 

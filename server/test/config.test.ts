@@ -25,3 +25,15 @@ test("invalid patterns are rejected", () => {
 test("diagnostics are off by default", () => {
   expect(ServerConfigSchema.parse({ endpoints: [endpoint] }).options.cachePrefixDiagnostics).toBe(false)
 })
+
+test("tui options default to quiet logging and the current provider", () => {
+  const parsed = ServerConfigSchema.parse({ endpoints: [endpoint] }).options.tui
+  expect(parsed).toEqual({ logLevel: "warn", sidebarMode: "current" })
+})
+
+test("tui options reject unknown values", () => {
+  const options = (tui: unknown) => ServerConfigSchema.safeParse({ endpoints: [endpoint], options: { tui } }).success
+  expect(options({ logLevel: "debug", sidebarMode: "masked" })).toBe(true)
+  expect(options({ logLevel: "verbose" })).toBe(false)
+  expect(options({ sidebarMode: "everything" })).toBe(false)
+})

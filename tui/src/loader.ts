@@ -4,16 +4,24 @@ import { getBudgetDataDir } from './paths'
 import type { KeyInfoFile, ProviderBudget, BudgetData } from './types'
 import type { Logger } from './log'
 
+export interface LoadResult {
+  budgets: BudgetData
+  hasErrors: boolean
+  errorCount: number
+}
+
 /**
  * Budget data loader - reads budget files from ~/.local/state/oclitellmac/key-info/
  */
 export class BudgetLoader {
   private budgetDataDir: string
   private logger: Logger
+  // Last invalid-file message per provider, so unchanged bad files are logged once
+  private lastErrors = new Map<string, string>()
 
-  constructor(logger: Logger) {
+  constructor(logger: Logger, budgetDataDir: string = getBudgetDataDir()) {
     this.logger = logger
-    this.budgetDataDir = getBudgetDataDir()
+    this.budgetDataDir = budgetDataDir
   }
 
   /**
@@ -25,39 +33,42 @@ export class BudgetLoader {
 
   /**
    * Load all budget files from key-info directory
+   * Files are read concurrently; budgets are ordered by provider name, then key.
    */
-  async loadAll(): Promise<{ budgets: BudgetData; hasErrors: boolean; errorCount: number }> {
-    this.logger.log('info', `loadAll: starting, budgetDataDir=${this.budgetDataDir}`)
-    const budgets: BudgetData = {}
-    let errorCount = 0
+  async loadAll(): Promise<LoadResult> {
+    this.logger.log('debug', `loadAll: starting, budgetDataDir=${this.budgetDataDir}`)
+    let files: string[]
 
     try {
-      const files = await readdir(this.budgetDataDir)
-      this.logger.log('info', `loadAll: found ${files.length} files`)
-      const jsonFiles = files.filter(f => f.endsWith('.json'))
-
-      for (const file of jsonFiles) {
-        const providerKey = file.replace('.json', '')
-        const budget = await this.loadOne(providerKey)
-
-        if (budget) {
-          budgets[providerKey] = budget
-          this.logger.log('info', `loadAll: loaded budget for ${providerKey}`)
-        } else {
-          errorCount++
-          this.logger.log('warn', `Failed to parse budget data for ${providerKey}`)
-        }
-      }
-    } catch (error) {
-      // Directory doesn't exist yet or is inaccessible
-      this.logger.log('info', 'Budget directory not found - waiting for server plugin')
+      files = await readdir(this.budgetDataDir)
+    } catch {
+      this.logger.log('debug', 'Budget directory not found - waiting for server plugin')
+      this.lastErrors.clear()
+      return { budgets: {}, hasErrors: false, errorCount: 0 }
     }
 
-    return {
-      budgets,
-      hasErrors: errorCount > 0,
-      errorCount
+    const keys = files.filter((f) => f.endsWith('.json')).map((f) => f.slice(0, -'.json'.length))
+    const loaded = await Promise.all(keys.map(async (key) => [key, await this.loadOne(key)] as const))
+
+    for (const known of [...this.lastErrors.keys()]) {
+      if (!keys.includes(known)) this.lastErrors.delete(known)
     }
+
+    const found: ProviderBudget[] = []
+    let errorCount = 0
+    for (const [, budget] of loaded) {
+      if (budget) found.push(budget)
+      else errorCount++
+    }
+    found.sort(
+      (a, b) => a.providerName.localeCompare(b.providerName) || a.providerKey.localeCompare(b.providerKey),
+    )
+
+    const budgets: BudgetData = {}
+    for (const budget of found) budgets[budget.providerKey] = budget
+
+    this.logger.log('debug', `loadAll: loaded ${found.length} budgets, ${errorCount} errors`)
+    return { budgets, hasErrors: errorCount > 0, errorCount }
   }
 
   /**
@@ -66,38 +77,50 @@ export class BudgetLoader {
   async loadOne(providerKey: string): Promise<ProviderBudget | null> {
     const filePath = path.join(this.budgetDataDir, `${providerKey}.json`)
 
+    let data: KeyInfoFile
     try {
-      const content = await readFile(filePath, 'utf-8')
-      const data = JSON.parse(content) as KeyInfoFile
-
-      // Validate required fields (nested under info)
-      if (
-        !data.keyInfo?.info ||
-        typeof data.keyInfo.info.spend !== 'number' ||
-        typeof data.keyInfo.info.max_budget !== 'number'
-      ) {
-        this.logger.log('error', `Invalid budget data for ${data.providerKey}: missing or invalid keyInfo.info fields`)
-        return null
-      }
-
-      // Transform to normalized format
-      return {
-        providerKey: data.providerKey,
-        providerName: data.providerName ?? this.formatProviderName(data.providerKey),
-        keyAlias: data.keyInfo.info.key_alias || 'Unknown',
-        spend: data.keyInfo.info.spend,
-        limit: data.keyInfo.info.max_budget,
-        remaining: data.keyInfo.info.max_budget - data.keyInfo.info.spend,
-        percentUsed: (data.keyInfo.info.spend / data.keyInfo.info.max_budget) * 100,
-        duration: data.keyInfo.info.budget_duration || 'Unknown',
-        resetAt: data.keyInfo.info.budget_reset_at || 'Unknown',
-        expiresAt: data.keyInfo.info.expires || 'Never',
-        lastFetched: data.fetchedAt,
-      }
+      data = JSON.parse(await readFile(filePath, 'utf-8')) as KeyInfoFile
     } catch (error) {
-      // File doesn't exist, invalid JSON, or missing fields
+      this.reportError(providerKey, `Unreadable budget file ${providerKey}.json: ${error instanceof Error ? error.message : String(error)}`)
       return null
     }
+
+    const info = data?.keyInfo?.info
+    if (!info || typeof info.spend !== 'number' || !Number.isFinite(info.spend)) {
+      this.reportError(providerKey, `Invalid budget data for ${providerKey}: missing or invalid keyInfo.info.spend`)
+      return null
+    }
+
+    const maxBudget = info.max_budget
+    if (maxBudget != null && typeof maxBudget !== 'number') {
+      this.reportError(providerKey, `Invalid budget data for ${providerKey}: keyInfo.info.max_budget is not a number`)
+      return null
+    }
+
+    this.lastErrors.delete(providerKey)
+
+    const limit = typeof maxBudget === 'number' && Number.isFinite(maxBudget) && maxBudget > 0 ? maxBudget : null
+    const resolvedKey = data.providerKey ?? providerKey
+
+    return {
+      providerKey: resolvedKey,
+      providerName: data.providerName ?? this.formatProviderName(resolvedKey),
+      keyAlias: info.key_alias || 'Unknown',
+      spend: info.spend,
+      limit,
+      remaining: limit === null ? null : limit - info.spend,
+      percentUsed: limit === null ? null : (info.spend / limit) * 100,
+      duration: info.budget_duration || null,
+      resetAt: info.budget_reset_at || null,
+      expiresAt: info.expires || 'Never',
+      lastFetched: data.fetchedAt,
+    }
+  }
+
+  private reportError(providerKey: string, message: string): void {
+    if (this.lastErrors.get(providerKey) === message) return
+    this.lastErrors.set(providerKey, message)
+    this.logger.log('warn', message)
   }
 
   /**

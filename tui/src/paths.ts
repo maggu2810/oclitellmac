@@ -1,4 +1,4 @@
-import { xdgState } from "xdg-basedir"
+import { xdgConfig, xdgState } from "xdg-basedir"
 import path from "path"
 
 /**
@@ -8,12 +8,22 @@ import path from "path"
  * and consistent Unix-style paths across all platforms (matching OpenCode core).
  * 
  * Environment variables respected:
+ * - XDG_CONFIG_HOME: Override config directory
  * - XDG_STATE_HOME: Override state directory
  */
 
 // ============================================================================
 // Base Directories
 // ============================================================================
+
+/**
+ * Configuration directory
+ * Default: ~/.config/oclitellmac
+ * Override: XDG_CONFIG_HOME environment variable
+ */
+export const configHome = xdgConfig
+  ? path.join(xdgConfig, "oclitellmac")
+  : undefined
 
 /**
  * State directory (persistent data that survives between sessions)
@@ -32,6 +42,17 @@ export const stateHome = xdgState
 // ============================================================================
 
 /**
+ * Get config directory path
+ * @throws Error if XDG_CONFIG_HOME is not set and home directory unavailable
+ */
+export function getConfigDir(): string {
+  if (!configHome) {
+    throw new Error("XDG_CONFIG_HOME is not set and home directory could not be determined")
+  }
+  return configHome
+}
+
+/**
  * Get state directory path
  * @throws Error if XDG_STATE_HOME is not set and home directory unavailable
  */
@@ -45,6 +66,16 @@ export function getStateDir(): string {
 // ============================================================================
 // Specific Paths (most commonly used by consumers)
 // ============================================================================
+
+/**
+ * Get configuration file path
+ * Returns: ~/.config/oclitellmac/server.json
+ *
+ * Used for: plugin settings (the TUI reads options.tui)
+ */
+export function getConfigPath(): string {
+  return path.join(getConfigDir(), "server.json")
+}
 
 /**
  * Get budget data directory
