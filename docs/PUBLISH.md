@@ -93,7 +93,9 @@ bun publish --access public
 - **Scoped packages** (e.g., `@username/package`): Default to private. Use `--access public` to publish publicly.
 - **Unscoped packages** (e.g., `package`): Default to public. The `--access public` flag is optional but harmless.
 
-To always publish publicly regardless of package type, include the flag.
+`oclitellmac` is unscoped, so the flag changes nothing (the output shows `Access: public`
+instead of `Access: default`). The workflow keeps it anyway: it is safe for both package
+types, so the same command keeps working if the package is ever renamed to a scope.
 
 **Alternative** — Omit the flag for unscoped packages:
 ```bash
@@ -137,35 +139,29 @@ https://www.npmjs.com/package/oclitellmac
 
 Use bun's built-in versioning command:
 
-**Patch release** (bug fixes, no new features):
 ```bash
-bun pm version patch
+bun pm version minor   # or patch, major
 ```
 
-**Minor release** (new features, backward compatible):
-```bash
-bun pm version minor
-```
+It only edits the `version` in `package.json` and prints the new version with a `v`
+prefix (for example `v0.6.0`). It does not create a commit or a tag, so do both
+yourself. The printed value works for the commit message and the tag name.
 
-**Major release** (breaking changes):
-```bash
-bun pm version major
-```
+### Version Scheme
 
-This automatically:
-1. Updates `package.json` version
-2. Creates a git commit
-3. Creates a git tag
+Odd minor versions are development versions, even minor versions are releases:
+e.g. `0.5.0` while developing, `0.6.0` for the release, then `0.7.0` for the next
+development cycle. Each release is therefore followed by a second bump to the next development version.
 
 ### Full Release Workflow
 
 ```bash
 # 1. Make your code changes and commit them
 git add .
-git commit -m "feat: add new feature"
+git commit -s -m "feat: add new feature"
 
-# 2. Bump version (creates commit + tag)
-bun pm version minor
+# 2. Bump to the release version (e.g. 0.5.0 -> 0.6.0), keep the printed value
+VERSION=$(bun pm version minor)
 
 # 3. Build the plugin
 bun run build
@@ -176,9 +172,22 @@ bun pm pack --dry-run
 # 5. Publish
 bun publish --access public
 
-# 6. Push commits and tags to GitHub
+# 6. After the publish succeeded: commit and tag the release
+git add package.json
+git commit -s -m "bump $VERSION"
+git tag "$VERSION"
+
+# 7. Bump to the next development version (e.g. 0.6.0 -> 0.7.0)
+VERSION=$(bun pm version minor)
+git add package.json
+git commit -s -m "bump $VERSION"
+
+# 8. Push commits and tags to GitHub
 git push && git push --tags
 ```
+
+Committing and tagging after the publish (step 6) keeps a failed publish from leaving a
+release commit and tag behind.
 
 ---
 
