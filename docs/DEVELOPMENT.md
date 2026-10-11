@@ -95,9 +95,18 @@ When running the manual end-to-end checklist (including cache diagnostics), [rea
 ## Local Development Loop
 
 1. Edit `server/src/` or `tui/src/`
-2. `bun run build`
-3. Restart OpenCode (plugins are loaded at startup)
-4. Check the logs: `~/.local/state/oclitellmac/server.log` (server) and `~/.local/state/oclitellmac/log/tui/` (TUI)
+2. `bun test` and `bun run typecheck` (neither writes to `dist/`)
+3. `bun run build` only when you want OpenCode to pick up the change (see the warning below)
+4. Restart OpenCode (plugins are loaded at startup)
+5. Check the logs: `~/.local/state/oclitellmac/server.log` (server) and `~/.local/state/oclitellmac/log/tui/` (TUI)
+
+**Warning**: a local registration points at `dist/`, and OpenCode watches local plugin files and reloads the plugin when they change. A rebuild therefore restarts the running plugin, including work it has in flight. To check that a bundle builds without touching `dist/`, build from a copy:
+
+```bash
+rm -rf /tmp/opencode/build && mkdir -p /tmp/opencode/build
+git archive HEAD | tar -x -C /tmp/opencode/build
+cd /tmp/opencode/build && bun run build
+```
 
 For local registration, point OpenCode at the absolute path of the `dist` directory (`<repo>/plugins/oclitellmac/dist`), not the project root. When registering the plugin or looking up CLI usage and spec formats, [read here](opencode-plugin-cli.md)
 
