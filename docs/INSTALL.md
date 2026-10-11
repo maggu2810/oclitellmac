@@ -57,7 +57,7 @@ Create `~/.config/oclitellmac/server.json` with your LiteLLM endpoint(s):
 }
 ```
 
-**For detailed configuration options**, see [CONFIGURATION.md](CONFIGURATION.md).
+**For detailed configuration options**, see [CONFIGURATION.md](CONFIGURATION.md). The file holds your API keys in plain text: when deciding who and what may read it, [read here](CONFIGURATION.md#where-the-key-is-exposed).
 
 **For complete examples**, see [`server/config-example.json`](../server/config-example.json).
 

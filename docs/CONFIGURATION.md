@@ -131,6 +131,43 @@ Bearer token for authenticating with the LiteLLM proxy. This is typically a key 
 
 The plugin automatically injects this key into all OpenCode requests for models from this provider.
 
+##### Where the key is exposed
+
+The plugin keeps the key in `server.json` and in memory, and it writes it nowhere else (not to
+the budget files, the provider cache or the logs). OpenCode v2 gets the key as part of the
+provider settings, so the local OpenCode server returns it from `GET /api/provider` and
+`GET /api/model` to any caller that authenticates with the service password.
+
+- **Who can read it:** only your own user. `server.json`, the service password files and
+  OpenCode's database are all mode 0600. A process running as you can already read the key from
+  `server.json`, and any key stored with `/connect` from `opencode.db`, which OpenCode does not
+  encrypt. The local API gives such a process nothing it could not get otherwise.
+- **What to avoid:** pasting or sharing responses of those two endpoints, for example from a REST
+  client. They list every configured key at once. The sidebar and the model picker do not show keys.
+- **The agent runs as you:** its file and shell tools can read these files unless OpenCode's
+  permission rules stop them. `external_directory` asks by default for paths outside the project,
+  and a `read` rule can deny paths. The rules below follow the format of the OpenCode permission
+  documentation. They have not been tested against this plugin, and they only guard against
+  accidental or prompted access.
+
+```json
+{
+  "permission": {
+    "external_directory": {
+      "~/.config/oclitellmac/**": "deny",
+      "~/.local/share/opencode/**": "deny"
+    },
+    "read": {
+      "~/.config/oclitellmac/**": "deny",
+      "~/.local/share/opencode/**": "deny"
+    }
+  }
+}
+```
+
+A plugin cannot keep the key out of the provider settings by storing it as an OpenCode
+credential instead: it can add one but not remove it, so keys would stay in the database.
+
 #### `providerKey` (required)
 
 Unique identifier for this provider. Used internally by OpenCode and displayed in the model picker.
