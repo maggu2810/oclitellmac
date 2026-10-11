@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "fs/promises"
+import { mkdir, readFile, rename, unlink, writeFile } from "fs/promises"
 import path from "path"
 import { getProviderCacheDir, getBudgetDataDir } from "./paths"
 
@@ -10,17 +10,17 @@ export class StateManager {
   private budgetDataDir: string
   private locks = new Map<string, Promise<void>>()
   
-  constructor() {
-    this.providerCacheDir = getProviderCacheDir()
-    this.budgetDataDir = getBudgetDataDir()
+  constructor(providerCacheDir = getProviderCacheDir(), budgetDataDir = getBudgetDataDir()) {
+    this.providerCacheDir = providerCacheDir
+    this.budgetDataDir = budgetDataDir
   }
   
   /**
    * Ensure state directories exist
    */
   async ensureDirectories(): Promise<void> {
-    await mkdir(this.providerCacheDir, { recursive: true })
-    await mkdir(this.budgetDataDir, { recursive: true })
+    await mkdir(this.providerCacheDir, { recursive: true, mode: 0o700 })
+    await mkdir(this.budgetDataDir, { recursive: true, mode: 0o700 })
   }
   
   /**
@@ -49,13 +49,27 @@ export class StateManager {
   }
   
   /**
+   * Write a private file atomically (temp file in the same directory, then rename)
+   */
+  private async writePrivate(filePath: string, content: string): Promise<void> {
+    const tmpPath = `${filePath}.${process.pid}.tmp`
+    try {
+      await writeFile(tmpPath, content, { encoding: "utf-8", mode: 0o600 })
+      await rename(tmpPath, filePath)
+    } catch (error) {
+      await unlink(tmpPath).catch(() => {})
+      throw error
+    }
+  }
+
+  /**
    * Save provider cache with atomic write
    */
   async saveProviderCache(providerKey: string, data: any): Promise<void> {
     return this.withLock(`provider:${providerKey}`, async () => {
       const filePath = path.join(this.providerCacheDir, `${providerKey}.json`)
       const content = JSON.stringify(data, null, 2)
-      await writeFile(filePath, content, "utf-8")
+      await this.writePrivate(filePath, content)
     })
   }
   
@@ -79,7 +93,7 @@ export class StateManager {
     return this.withLock(`budget:${providerKey}`, async () => {
       const filePath = path.join(this.budgetDataDir, `${providerKey}.json`)
       const content = JSON.stringify(data, null, 2)
-      await writeFile(filePath, content, "utf-8")
+      await this.writePrivate(filePath, content)
     })
   }
   

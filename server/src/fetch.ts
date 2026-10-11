@@ -73,13 +73,41 @@ function extractReasoningEfforts(...sources: Array<Record<string, unknown> | und
   return [...efforts]
 }
 
-export interface KeyInfoResponse {
-  key_alias?: string
+export interface KeyInfoFields {
+  key_alias?: string | null
   spend?: number
-  max_budget?: number
-  budget_remaining?: number
-  budget_reset_at?: string
-  // Add other fields as needed from LiteLLM /key/info response
+  max_budget?: number | null
+  budget_duration?: string | null
+  budget_reset_at?: string | null
+  expires?: string | null
+  [field: string]: unknown
+}
+
+/** Shape of LiteLLM's `/key/info` response; only `info` is consumed. */
+export interface KeyInfoResponse {
+  key?: string
+  info?: KeyInfoFields
+  [field: string]: unknown
+}
+
+/** Remove trailing slashes and a `/v1` suffix. */
+export function normalizeBaseUrl(baseUrl: string): string {
+  return baseUrl.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
+}
+
+/**
+ * Group endpoints by normalized base URL, keeping first-seen group order and
+ * the endpoint order within each group.
+ */
+export function groupByBaseUrl<T extends { baseUrl: string }>(endpoints: T[]): Map<string, T[]> {
+  const groups = new Map<string, T[]>()
+  for (const endpoint of endpoints) {
+    const key = normalizeBaseUrl(endpoint.baseUrl)
+    const group = groups.get(key)
+    if (group) group.push(endpoint)
+    else groups.set(key, [endpoint])
+  }
+  return groups
 }
 
 export class LiteLLMClient {
@@ -89,11 +117,8 @@ export class LiteLLMClient {
     private timeout: number = 30
   ) {}
   
-  /**
-   * Normalize base URL (remove trailing slashes and /v1)
-   */
   private normalizeBaseUrl(): string {
-    return this.baseUrl.replace(/\/v1\/?$/, "").replace(/\/+$/, "")
+    return normalizeBaseUrl(this.baseUrl)
   }
   
   /**
@@ -111,7 +136,7 @@ export class LiteLLMClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
-      const data = await response.json()
+      const data = (await response.json()) as ModelHubEntry[] | { data?: ModelHubEntry[] }
       return Array.isArray(data) ? data : (data.data || [])
     } catch (error) {
       throw new Error(
@@ -136,7 +161,7 @@ export class LiteLLMClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
-      const data = await response.json()
+      const data = (await response.json()) as { data?: ModelInfoEntry[] }
       const result: Record<string, any> = {}
       
       for (const item of data.data || []) {
@@ -174,7 +199,7 @@ export class LiteLLMClient {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
       
-      return await response.json()
+      return (await response.json()) as KeyInfoResponse
     } catch (error) {
       throw new Error(
         `Failed to fetch key info from ${url}: ${error instanceof Error ? error.message : String(error)}`
