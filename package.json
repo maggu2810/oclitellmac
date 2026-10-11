@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "bun scripts/build.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "typecheck": "tsc -p ."
   },
   "files": [
     "dist/"

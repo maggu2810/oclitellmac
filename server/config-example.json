@@ -17,8 +17,8 @@
   ],
   "options": {
     "fallbackToCache": true,
-    "timeout": 10000,
-    "budgetPollInterval": 60000
+    "timeout": 30,
+    "budgetPollInterval": 60
   },
   "_comments": {
     "providerKey": "Unique identifier for this provider (used as ID, auto-formatted to display name)",
@@ -31,9 +31,11 @@
     "providerOptions": "OPTIONAL: Forwarded into the injected provider's options block. Fields: timeout, chunkTimeout, headerTimeout, setCacheKey. See CONFIGURATION.md.",
     "anthropicModels": "OPTIONAL: Model ID glob patterns using the Anthropic-native route (default: [\"claude-*\"]; [] disables). See CONFIGURATION.md.",
     "cachePrefixDiagnostics": "OPTIONAL: Log request counts and hashes to diagnose prompt-cache misses (default: false)",
+    "budgetUpdateDiagnostics": "OPTIONAL: Log a line for every budget refresh (default: false)",
+    "tui": "OPTIONAL: Sidebar settings: { logLevel: error|warn|info|debug (default warn), sidebarMode: current|all|hidden|masked (default current) }. See CONFIGURATION.md.",
     "fallbackToCache": "If true, use cached model/budget data when endpoint is unreachable (default: true)",
-    "timeout": "Request timeout in milliseconds (default: 30ms, example shows 10000ms)",
-    "budgetPollInterval": "How often to poll budget data in milliseconds (default: 60ms, example shows 60000ms = 1 minute)"
+    "timeout": "HTTP request timeout in seconds (default: 30)",
+    "budgetPollInterval": "How often to poll budget data in seconds (default: 60). Idle providers are polled every 10 intervals."
   },
   "_installation": {
     "1": "Copy this file to: ~/.config/oclitellmac/server.json (Linux/macOS) or %USERPROFILE%\\.config\\oclitellmac\\server.json (Windows)",

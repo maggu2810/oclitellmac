@@ -7,7 +7,7 @@
 
 // Non-chat categories — models in these categories are blacklisted by
 // default. Each can be re-enabled via config flags.
-export const NON_CHAT_CATEGORIES = new Set([
+export const NON_CHAT_CATEGORIES = new Set<Category>([
 	"embedding",
 	"audio_speech",
 	"transcription",
@@ -16,7 +16,7 @@ export const NON_CHAT_CATEGORIES = new Set([
 	"ocr",
 	"ranking",
 	"router",
-] as const);
+]);
 
 export type Category =
 	| "chat"
