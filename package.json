@@ -42,17 +42,17 @@
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@opencode/plugin": "^2.0.24",
-    "@opentui/core": "0.5.14",
-    "@opentui/keymap": "0.5.14",
-    "@opentui/solid": "0.5.14",
+    "@opencode/plugin": "^2.1.4",
+    "@opentui/core": "0.6.8",
+    "@opentui/keymap": "0.6.8",
+    "@opentui/solid": "0.6.8",
     "solid-js": "*",
     "typescript": "^5.6.0"
   },
   "peerDependencies": {
-    "@opentui/core": ">=0.5.14",
-    "@opentui/keymap": ">=0.5.14",
-    "@opentui/solid": ">=0.5.14",
+    "@opentui/core": ">=0.6.8",
+    "@opentui/keymap": ">=0.6.8",
+    "@opentui/solid": ">=0.6.8",
     "solid-js": ">=1.0.0"
   },
   "peerDependenciesMeta": {
