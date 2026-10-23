@@ -364,7 +364,7 @@ This guide covers common issues when using the oclitellmac plugin.
 
 ### "Cannot find package '@opencode/ai'"
 
-**Cause:** A model uses a provider package that is not bundled in the opencode binary (for example `@opencode/ai/providers/anthropic-compatible`). Plugins can only use the bundled providers; oclitellmac uses `openai-compatible` and `anthropic`.
+**Cause:** A model uses a provider package that is not bundled in the opencode binary. Plugins can only use the bundled providers. OpenCode before v2.1 did not bundle `@opencode/ai/providers/anthropic-compatible`, which early oclitellmac builds used; oclitellmac now uses `openai-compatible` and `anthropic`, which every v2 release bundles.
 
 **Fix:** Update to a current oclitellmac build. If you modified the plugin, only reference bundled provider packages.
 

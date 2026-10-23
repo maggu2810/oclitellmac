@@ -3,7 +3,7 @@ import type { Thinking } from "./map"
 
 type AnyRecord = Record<string, any>
 
-// Not `anthropic-compatible`: the compiled opencode binary only bundles the packages in its builtin list.
+// Not `anthropic-compatible`: OpenCode binaries before v2.1 did not bundle it, and plugins can only load bundled packages.
 export const ANTHROPIC_PACKAGE = "@opencode/ai/providers/anthropic"
 
 const ADAPTIVE_THINKING = { type: "adaptive", display: "summarized" }
