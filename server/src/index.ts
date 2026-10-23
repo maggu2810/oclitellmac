@@ -150,12 +150,13 @@ export default {
               apiKey: endpoint.apiKey,
               ...settingsOptions,
             },
+            ...(setCacheKey ? { compatibility: { supportsPromptCacheKey: true } } : {}),
           },
           models: Object.values(models).map((entry) =>
             toModelInfo(endpoint.providerKey, entry, {
               enabled: !disabled.has(entry.id),
               anthropic: matchesAny(entry.id, endpoint.anthropicModels),
-              supportsPromptCacheKey: setCacheKey,
+              providerSetsCacheKey: setCacheKey,
             }),
           ),
         },

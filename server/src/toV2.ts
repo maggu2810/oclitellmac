@@ -14,8 +14,11 @@ export interface ModelOptions {
   enabled: boolean
   /** Use the Anthropic-native Messages route for this model. */
   anthropic: boolean
-  /** Send OpenAI's `prompt_cache_key` (OpenAI-compatible route only). */
-  supportsPromptCacheKey?: boolean
+  /**
+   * The provider sets `supportsPromptCacheKey` for all its models; Anthropic-route models turn it off
+   * again, because `prompt_cache_key` is an OpenAI field.
+   */
+  providerSetsCacheKey?: boolean
 }
 
 /** Convert a LiteLLM-derived model entry (see build.ts) into a V2 `Model.Info`. */
@@ -37,10 +40,11 @@ export function toModelInfo(providerKey: string, entry: AnyRecord, options: Mode
     providerID: providerKey as Provider.ID,
     name: entry.name ?? entry.id,
     ...(options.anthropic
-      ? { package: ANTHROPIC_PACKAGE }
-      : options.supportsPromptCacheKey
-        ? { compatibility: { supportsPromptCacheKey: true } }
-        : {}),
+      ? {
+          package: ANTHROPIC_PACKAGE,
+          ...(options.providerSetsCacheKey ? { compatibility: { supportsPromptCacheKey: false } } : {}),
+        }
+      : {}),
     capabilities: {
       tools: entry.tool_call === true,
       input: entry.modalities?.input ?? ["text"],

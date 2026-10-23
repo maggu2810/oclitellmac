@@ -16,10 +16,10 @@ const info = {
 }
 const entry = buildModelEntry(hub, info, "chat")
 
-test("OpenAI-compatible route keeps today's behaviour", () => {
-  const model = toModelInfo("p", entry, { enabled: true, anthropic: false, supportsPromptCacheKey: true })
+test("OpenAI-compatible route leaves compatibility to the provider", () => {
+  const model = toModelInfo("p", entry, { enabled: true, anthropic: false, providerSetsCacheKey: true })
   expect(model.package).toBeUndefined()
-  expect(model.compatibility).toEqual({ supportsPromptCacheKey: true })
+  expect(model.compatibility).toBeUndefined()
   expect(model.variants.map((variant) => variant.id)).toEqual(Object.keys(entry.variants))
   expect(model.variants[0].settings).toEqual({ reasoningEffort: model.variants[0].id })
 })
@@ -28,10 +28,14 @@ test("Anthropic route uses the bundled Anthropic package", () => {
   expect(ANTHROPIC_PACKAGE).toBe("@opencode/ai/providers/anthropic")
 })
 
-test("Anthropic route sets the package and never the prompt cache key flag", () => {
-  const model = toModelInfo("p", entry, { enabled: true, anthropic: true, supportsPromptCacheKey: true })
+test("Anthropic route turns off a provider-level prompt cache key", () => {
+  const model = toModelInfo("p", entry, { enabled: true, anthropic: true, providerSetsCacheKey: true })
   expect(model.package).toBe(ANTHROPIC_PACKAGE)
-  expect(model.compatibility).toBeUndefined()
+  expect(model.compatibility).toEqual({ supportsPromptCacheKey: false })
+})
+
+test("Anthropic route sets no compatibility when the provider has none", () => {
+  expect(toModelInfo("p", entry, { enabled: true, anthropic: true }).compatibility).toBeUndefined()
 })
 
 test("Anthropic adaptive variants carry thinking and effort", () => {

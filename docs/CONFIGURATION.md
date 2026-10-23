@@ -221,8 +221,9 @@ Default: `false` (only chat models enabled)
 #### `providerOptions` (optional)
 
 Timeout fields are forwarded into the provider's `settings`, alongside
-`baseURL` and `apiKey`. Timeouts are in milliseconds. `setCacheKey` is applied
-to each OpenAI-compatible model as `compatibility.supportsPromptCacheKey`.
+`baseURL` and `apiKey`. Timeouts are in milliseconds. `setCacheKey` is set once on
+the provider as `compatibility.supportsPromptCacheKey`, and models on the Anthropic route
+turn it off again.
 
 ```json
 "providerOptions": {

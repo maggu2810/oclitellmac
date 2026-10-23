@@ -155,7 +155,7 @@ hubEntries + infoMap
 
 #### `toV2.ts` - V2 Conversion
 - `toModelInfo(providerKey, entry, options)`: Converts a model entry to a V2 `Model.Info`
-- Options: `enabled`, `anthropic` (route), `supportsPromptCacheKey` (OpenAI-compatible route only)
+- Options: `enabled`, `anthropic` (route), `providerSetsCacheKey` (the provider sets `supportsPromptCacheKey`; Anthropic-route models turn it off)
 - Anthropic route: sets the `package` on the model and builds variants from `entry.thinking`
 - OpenAI-compatible route: variants use `reasoningEffort`
 - Costs, limits and capabilities are identical on both routes
