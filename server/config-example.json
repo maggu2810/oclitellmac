@@ -28,7 +28,7 @@
     "enabled": "OPTIONAL: Set to false to temporarily disable this endpoint (default: true)",
     "enabledCategories": "OPTIONAL: Array of non-chat model categories to enable (default: [] = chat only). Valid: ['embedding', 'audio_speech', 'transcription', 'image_generation', 'video_generation', 'ocr', 'ranking', 'router']",
     "enableAllCategories": "OPTIONAL: Set to true to enable all non-chat models (default: false). Overrides enabledCategories.",
-    "providerOptions": "OPTIONAL: Forwarded into the injected provider's options block. Fields: timeout, chunkTimeout, headerTimeout, setCacheKey. See CONFIGURATION.md.",
+    "providerOptions": "OPTIONAL: Forwarded into the injected provider's options block. Fields: timeout, chunkTimeout, headerTimeout, encoding, setCacheKey. See CONFIGURATION.md.",
     "anthropicModels": "OPTIONAL: Model ID glob patterns using the Anthropic-native route (default: [\"claude-*\"]; [] disables). See CONFIGURATION.md.",
     "cacheBreakpointModels": "OPTIONAL: Model ID glob patterns that stay on the OpenAI-compatible route but get prompt-cache breakpoints (default: []; OpenCode v2.1+). See CONFIGURATION.md.",
     "cachePrefixDiagnostics": "OPTIONAL: Log request counts and hashes to diagnose prompt-cache misses (default: false)",

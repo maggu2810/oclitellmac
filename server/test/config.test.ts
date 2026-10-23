@@ -46,3 +46,13 @@ test("cacheBreakpointModels defaults to none and validates patterns", () => {
   expect(EndpointConfigSchema.safeParse({ ...endpoint, cacheBreakpointModels: "gemini-*" }).success).toBe(false)
   expect(EndpointConfigSchema.safeParse({ ...endpoint, cacheBreakpointModels: ["bad pattern"] }).success).toBe(false)
 })
+
+test("providerOptions.encoding accepts only the values OpenCode supports", () => {
+  const parse = (encoding: unknown) =>
+    EndpointConfigSchema.safeParse({ ...endpoint, providerOptions: { encoding } })
+  expect(parse("gzip").success).toBe(true)
+  expect(parse("zstd").success).toBe(true)
+  expect(parse("none").success).toBe(true)
+  expect(parse("br").success).toBe(false)
+  expect(EndpointConfigSchema.parse(endpoint).providerOptions).toBeUndefined()
+})

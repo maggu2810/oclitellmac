@@ -146,7 +146,7 @@ For each endpoint the plugin registers one provider and its models.
     baseURL: "https://gateway.com/v1",                // baseUrl with a single /v1
     apiKey: "sk-...",
     // From endpoint.providerOptions (setCacheKey goes into compatibility below):
-    // timeout, chunkTimeout, headerTimeout (milliseconds)
+    // timeout, chunkTimeout, headerTimeout (milliseconds), encoding
   },
   compatibility: { supportsPromptCacheKey: true }     // only with providerOptions.setCacheKey
 }

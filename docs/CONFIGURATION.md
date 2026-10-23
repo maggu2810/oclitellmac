@@ -221,7 +221,7 @@ Default: `false` (only chat models enabled)
 
 #### `providerOptions` (optional)
 
-Timeout fields are forwarded into the provider's `settings`, alongside
+Timeout and encoding fields are forwarded into the provider's `settings`, alongside
 `baseURL` and `apiKey`. Timeouts are in milliseconds. `setCacheKey` is set once on
 the provider as `compatibility.supportsPromptCacheKey`, and models on the Anthropic route
 turn it off again.
@@ -237,9 +237,10 @@ turn it off again.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `timeout` | number \| `false` | Request timeout in milliseconds. `false` disables it. |
-| `chunkTimeout` | number | Timeout in milliseconds between streamed SSE chunks. |
-| `headerTimeout` | number \| `false` | Timeout in milliseconds to wait for response headers. `false` disables it. |
+| `timeout` | number \| `false` | Request timeout in milliseconds. `false` disables it. OpenCode sets no limit when unset. |
+| `chunkTimeout` | number \| `false` | Timeout in milliseconds between streamed SSE chunks. `false` disables it. OpenCode's default is 15 minutes (v2.1+; 5 minutes before). |
+| `headerTimeout` | number \| `false` | Timeout in milliseconds to wait for response headers. `false` disables it. OpenCode's default is 5 minutes. |
+| `encoding` | `"zstd"` \| `"gzip"` \| `"none"` | Compression of JSON request bodies (OpenCode v2.1+). Only set it for a gateway known to decode `Content-Encoding` on requests; otherwise requests fail. Unset sends plain JSON. |
 | `setCacheKey` | boolean | Send OpenAI's `prompt_cache_key` on OpenAI-compatible models. It has no effect on Anthropic prompt caching, and is ignored for models on the Anthropic route. |
 
 All fields are optional and omitted from the generated provider config when

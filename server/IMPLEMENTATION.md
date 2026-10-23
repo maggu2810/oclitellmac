@@ -81,7 +81,7 @@ nano ~/.config/oclitellmac/server.json
 
 See [CONFIGURATION.md](../docs/CONFIGURATION.md) for the full field
 reference, including optional `enabledCategories`, `enableAllCategories`,
-`providerOptions` (timeout/chunkTimeout/headerTimeout/setCacheKey), and
+`providerOptions` (timeout/chunkTimeout/headerTimeout/encoding/setCacheKey), and
 `anthropicModels`.
 
 ### 3. Add Plugin to OpenCode

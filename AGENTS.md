@@ -24,7 +24,7 @@ Unified plugin combining server and TUI functionality for LiteLLM integration.
 - Real-time budget display in sidebar
 - Cross-platform XDG path support (Linux/macOS/Windows)
 - Reasoning-effort variants surfaced from LiteLLM's `/v1/model/info`
-- Optional provider-level options (timeout, chunkTimeout, headerTimeout, setCacheKey)
+- Optional provider-level options (timeout, chunkTimeout, headerTimeout, encoding, setCacheKey)
 - Claude models use the Anthropic-native route by default (`anthropicModels`); for config, [read here](docs/CONFIGURATION.md); for design, [read here](server/ARCHITECTURE.md)
 
 ## File Reading Instructions

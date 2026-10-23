@@ -24,12 +24,14 @@ const CategorySchema = z.enum([
 const ProviderOptionsSchema = z.object({
   // Milliseconds. `false` disables the timeout entirely.
   timeout: z.union([z.number(), z.literal(false)]).optional(),
-  // Milliseconds between streamed SSE chunks before aborting.
+  // Milliseconds between streamed SSE chunks before aborting. `false` disables it.
   chunkTimeout: z.union([z.number(), z.literal(false)]).optional(),
   // Milliseconds to wait for response headers. `false` disables it.
   headerTimeout: z.union([z.number(), z.literal(false)]).optional(),
   // Marks every model of this provider as supporting a prompt cache key.
   setCacheKey: z.boolean().optional(),
+  // Compression of JSON request bodies (OpenCode v2.1+). Only for gateways known to decode it.
+  encoding: z.enum(["zstd", "gzip", "none"]).optional(),
 })
 
 // Endpoint configuration schema
