@@ -157,6 +157,7 @@ export default {
               enabled: !disabled.has(entry.id),
               anthropic: matchesAny(entry.id, endpoint.anthropicModels),
               providerSetsCacheKey: setCacheKey,
+              cacheBreakpoints: matchesAny(entry.id, endpoint.cacheBreakpointModels),
             }),
           ),
         },

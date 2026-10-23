@@ -77,3 +77,19 @@ test("costs, limits and enabled state are the same on both routes", () => {
   expect(generic.cost[0].cache.read).toBeCloseTo(0.2)
   expect(generic.cost[0].cache.write).toBeCloseTo(2.5)
 })
+
+test("cache breakpoints mark an OpenAI-compatible model with the Anthropic cache format", () => {
+  const model = toModelInfo("p", entry, { enabled: true, anthropic: false, cacheBreakpoints: true })
+  expect(model.package).toBeUndefined()
+  expect(model.compatibility).toEqual({ cacheFormat: "anthropic" })
+})
+
+test("cache breakpoints do not change Anthropic-route models", () => {
+  const model = toModelInfo("p", entry, { enabled: true, anthropic: true, cacheBreakpoints: true })
+  expect(model.package).toBe(ANTHROPIC_PACKAGE)
+  expect(model.compatibility).toBeUndefined()
+})
+
+test("models without cache breakpoints get no cache format", () => {
+  expect(toModelInfo("p", entry, { enabled: true, anthropic: false }).compatibility).toBeUndefined()
+})

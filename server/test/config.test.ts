@@ -37,3 +37,12 @@ test("tui options reject unknown values", () => {
   expect(options({ logLevel: "verbose" })).toBe(false)
   expect(options({ sidebarMode: "everything" })).toBe(false)
 })
+
+test("cacheBreakpointModels defaults to none and validates patterns", () => {
+  expect(EndpointConfigSchema.parse(endpoint).cacheBreakpointModels).toEqual([])
+  expect(EndpointConfigSchema.parse({ ...endpoint, cacheBreakpointModels: ["gemini-*"] }).cacheBreakpointModels).toEqual([
+    "gemini-*",
+  ])
+  expect(EndpointConfigSchema.safeParse({ ...endpoint, cacheBreakpointModels: "gemini-*" }).success).toBe(false)
+  expect(EndpointConfigSchema.safeParse({ ...endpoint, cacheBreakpointModels: ["bad pattern"] }).success).toBe(false)
+})

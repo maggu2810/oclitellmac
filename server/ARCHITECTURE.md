@@ -174,7 +174,7 @@ For each endpoint the plugin registers one provider and its models.
 | OpenAI-compatible | Everything else | provider default | `reasoningEffort` per level LiteLLM reports |
 | Anthropic-native | Models matching `anthropicModels` (default `claude-*`) | set on the model | Built from LiteLLM's thinking flags |
 
-Of the two routes, only the Anthropic-native one gets prompt-cache breakpoints (`cache_control`) from OpenCode; the OpenAI-compatible chat route sends none. That is why Claude models use their own route. The gateway must expose `POST <baseUrl>/v1/messages` for this to work. For the configuration field, when configuring which models use the Anthropic route, [read here](../docs/CONFIGURATION.md#anthropicmodels-optional).
+Of the two routes, only the Anthropic-native one gets prompt-cache breakpoints (`cache_control`) from OpenCode by default; the OpenAI-compatible chat route sends none unless a model is marked with `compatibility.cacheFormat: "anthropic"` (OpenCode v2.1+, set for models matching `cacheBreakpointModels`). That is why Claude models use their own route. The gateway must expose `POST <baseUrl>/v1/messages` for this to work. For the configuration field, when configuring which models use the Anthropic route, [read here](../docs/CONFIGURATION.md#anthropicmodels-optional).
 
 Anthropic variants follow what LiteLLM reports in `/v1/model/info`:
 

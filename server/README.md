@@ -71,7 +71,7 @@ When looking for the rationale and alternatives considered, [read here](../docs/
 
 #### `config.ts` - Configuration Schema
 - Defines Zod schemas for validation:
-  - `EndpointConfigSchema`: Per-endpoint settings (baseUrl, apiKey, categories, `anthropicModels`, `providerOptions`)
+  - `EndpointConfigSchema`: Per-endpoint settings (baseUrl, apiKey, categories, `anthropicModels`, `cacheBreakpointModels`, `providerOptions`)
   - `ServerConfigSchema`: Global options (timeout, polling interval, caching, diagnostics)
 - Loads and validates `server.json`
 - Provides typed config interfaces
@@ -151,11 +151,11 @@ hubEntries + infoMap
 
 #### `match.ts` - Model ID Matching
 - `matchesAny(id, patterns)`: Case-insensitive glob match where `*` is the only wildcard
-- Used with `anthropicModels` to choose each model's route
+- Used with `anthropicModels` to choose each model's route, and with `cacheBreakpointModels` to mark OpenAI-compatible models for cache breakpoints
 
 #### `toV2.ts` - V2 Conversion
 - `toModelInfo(providerKey, entry, options)`: Converts a model entry to a V2 `Model.Info`
-- Options: `enabled`, `anthropic` (route), `providerSetsCacheKey` (the provider sets `supportsPromptCacheKey`; Anthropic-route models turn it off)
+- Options: `enabled`, `anthropic` (route), `providerSetsCacheKey` (the provider sets `supportsPromptCacheKey`; Anthropic-route models turn it off), `cacheBreakpoints` (OpenAI-compatible route only: `compatibility.cacheFormat: "anthropic"`)
 - Anthropic route: sets the `package` on the model and builds variants from `entry.thinking`
 - OpenAI-compatible route: variants use `reasoningEffort`
 - Costs, limits and capabilities are identical on both routes

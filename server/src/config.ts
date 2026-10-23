@@ -48,6 +48,13 @@ export const EndpointConfigSchema = z.object({
     .array(z.string().regex(/^[\w.*:/@-]+$/, "Invalid model pattern"))
     .optional()
     .default(["claude-*"]),
+  // Glob patterns for models that stay on the OpenAI-compatible route but get Anthropic-style
+  // cache_control breakpoints (`compatibility.cacheFormat: "anthropic"`). Models matching
+  // `anthropicModels` already get breakpoints and are not affected.
+  cacheBreakpointModels: z
+    .array(z.string().regex(/^[\w.*:/@-]+$/, "Invalid model pattern"))
+    .optional()
+    .default([]),
 })
 
 // Server configuration schema

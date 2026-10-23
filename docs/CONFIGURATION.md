@@ -107,6 +107,7 @@ Each endpoint in the `endpoints` array supports the following fields:
 | `enabledCategories` | string[] | ❌ | Non-chat model categories to enable (see [Model Category Filtering](#model-category-filtering)) |
 | `enableAllCategories` | boolean | ❌ | Default: `false`. Enable all non-chat models |
 | `anthropicModels` | string[] | ❌ | Default: `["claude-*"]`. Model ID patterns that use the Anthropic-native route (see [`anthropicModels`](#anthropicmodels-optional)) |
+| `cacheBreakpointModels` | string[] | ❌ | Default: `[]`. Model ID patterns that stay on the OpenAI-compatible route but get prompt-cache breakpoints (see [`cacheBreakpointModels`](#cachebreakpointmodels-optional)) |
 
 ### Field Details
 
@@ -252,8 +253,9 @@ instead of the OpenAI-compatible chat route. They stay under the same provider,
 with the same `apiKey` and `baseURL`, so the model picker and budget display do
 not change.
 
-Of the two routes, only the Anthropic route sends `cache_control` breakpoints, so
-Claude models need it for prompt caching. Reasoning variants are built from the flags LiteLLM
+By default, only the Anthropic route sends `cache_control` breakpoints, so Claude models
+need it for prompt caching. For models that must stay on the OpenAI-compatible route, see
+[`cacheBreakpointModels`](#cachebreakpointmodels-optional). Reasoning variants are built from the flags LiteLLM
 reports in `/v1/model/info`: adaptive models get effort levels, other reasoning
 models get token-budget variants.
 
@@ -265,6 +267,25 @@ The default is `["claude-*"]`, which also covers aliases such as
 `claude-sonnet-latest`. Use `[]` to keep every model on the OpenAI-compatible
 route. The gateway must expose `POST <baseUrl>/v1/messages`; check that
 before relying on the default.
+
+#### `cacheBreakpointModels` (optional)
+
+Glob patterns, matched like `anthropicModels`, for models that stay on the OpenAI-compatible
+route but should still get Anthropic-style `cache_control` breakpoints. The plugin marks them
+with `compatibility.cacheFormat: "anthropic"`, and OpenCode then adds the same breakpoints as on
+the Anthropic route. This needs OpenCode v2.1 or later; older versions ignore the field.
+
+```json
+"cacheBreakpointModels": ["my-claude-alias", "bedrock-claude-*"]
+```
+
+Use it for models that LiteLLM serves from Anthropic (or another provider that honors
+`cache_control`) under a name `anthropicModels` does not match, or that you deliberately keep on
+the OpenAI-compatible route. The gateway must forward `cache_control` for it to have any effect.
+Do not list models from providers that cache automatically, such as OpenAI or Gemini: for them
+the markers are useless, and for Gemini LiteLLM turns them into paid explicit caching. Models
+matching `anthropicModels` already get breakpoints and are not affected. The default `[]`
+changes nothing.
 
 ##### Prompt cache lifetime
 

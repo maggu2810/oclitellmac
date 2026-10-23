@@ -30,6 +30,7 @@
     "enableAllCategories": "OPTIONAL: Set to true to enable all non-chat models (default: false). Overrides enabledCategories.",
     "providerOptions": "OPTIONAL: Forwarded into the injected provider's options block. Fields: timeout, chunkTimeout, headerTimeout, setCacheKey. See CONFIGURATION.md.",
     "anthropicModels": "OPTIONAL: Model ID glob patterns using the Anthropic-native route (default: [\"claude-*\"]; [] disables). See CONFIGURATION.md.",
+    "cacheBreakpointModels": "OPTIONAL: Model ID glob patterns that stay on the OpenAI-compatible route but get prompt-cache breakpoints (default: []; OpenCode v2.1+). See CONFIGURATION.md.",
     "cachePrefixDiagnostics": "OPTIONAL: Log request counts and hashes to diagnose prompt-cache misses (default: false)",
     "budgetUpdateDiagnostics": "OPTIONAL: Log a line for every budget refresh (default: false)",
     "tui": "OPTIONAL: Sidebar settings: { logLevel: error|warn|info|debug (default warn), sidebarMode: current|all|hidden|masked (default current) }. See CONFIGURATION.md.",

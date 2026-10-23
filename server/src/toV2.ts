@@ -19,6 +19,8 @@ export interface ModelOptions {
    * again, because `prompt_cache_key` is an OpenAI field.
    */
   providerSetsCacheKey?: boolean
+  /** OpenAI-compatible route only: send Anthropic-style `cache_control` breakpoints. */
+  cacheBreakpoints?: boolean
 }
 
 /** Convert a LiteLLM-derived model entry (see build.ts) into a V2 `Model.Info`. */
@@ -44,7 +46,9 @@ export function toModelInfo(providerKey: string, entry: AnyRecord, options: Mode
           package: ANTHROPIC_PACKAGE,
           ...(options.providerSetsCacheKey ? { compatibility: { supportsPromptCacheKey: false } } : {}),
         }
-      : {}),
+      : options.cacheBreakpoints
+        ? { compatibility: { cacheFormat: "anthropic" as const } }
+        : {}),
     capabilities: {
       tools: entry.tool_call === true,
       input: entry.modalities?.input ?? ["text"],
